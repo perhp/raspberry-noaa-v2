@@ -21,16 +21,19 @@ ntp_server: ''
 #   test_freq_offset - receiver frequency offset (PPM)
 test_gain: 7.7
 test_sdr_device_id: 0
-test_enable_bias_tee: true
+test_enable_bias_tee: false
 test_freq_offset: 0
 
 # receiver settings
-#   meteor_receiver - which receiver method to use (either 'rtl_fm' or 'gnuradio')
+#   receiver_type - the receiver type which program uses ('rtlsdr', 'airspy_mini', 'airspy_r2' or 'hackrf')
 #   noaa_receiver  - which receiver method to use (either 'rtl_fm' or 'gnuradio')
+#   meteor_receiver - which receiver method to use (either 'rtl_fm' or 'satdump')
 #     **WARNING**: 'gnuradio' does not work with certain SDR devices (e.g. it will not currently
 #                  work with a RTL-SDR v3 dongle, as no image will be decoded from the bitstream)
-meteor_receiver: 'gnuradio'
+receiver_type: 'rtlsdr'
+
 noaa_receiver: 'gnuradio'
+meteor_receiver: 'gnuradio'
 
 # whether to schedule specific orbiting objects for capture
 #   <satellite_name>_schedule - whether to schedule captures for the satellite
@@ -45,7 +48,7 @@ noaa_receiver: 'gnuradio'
 noaa_15_schedule: true
 noaa_15_sdr_device_id: 0
 noaa_15_freq_offset: 0
-noaa_15_enable_bias_tee: true
+noaa_15_enable_bias_tee: false
 noaa_15_gain: 30
 noaa_15_sun_min_elevation: 6
 noaa_15_sat_min_elevation: 30
@@ -53,7 +56,7 @@ noaa_15_sat_min_elevation: 30
 noaa_18_schedule: true
 noaa_18_sdr_device_id: 0
 noaa_18_freq_offset: 0
-noaa_18_enable_bias_tee: true
+noaa_18_enable_bias_tee: false
 noaa_18_gain: 30
 noaa_18_sun_min_elevation: 6
 noaa_18_sat_min_elevation: 30
@@ -61,7 +64,7 @@ noaa_18_sat_min_elevation: 30
 noaa_19_schedule: true
 noaa_19_sdr_device_id: 0
 noaa_19_freq_offset: 0
-noaa_19_enable_bias_tee: true
+noaa_19_enable_bias_tee: false
 noaa_19_gain: 30
 noaa_19_sun_min_elevation: 6
 noaa_19_sat_min_elevation: 30
@@ -69,7 +72,7 @@ noaa_19_sat_min_elevation: 30
 meteor_m2_schedule: true
 meteor_m2_sdr_device_id: 0
 meteor_m2_freq_offset: 0
-meteor_m2_enable_bias_tee: true
+meteor_m2_enable_bias_tee: false
 meteor_m2_gain: 30
 meteor_m2_sun_min_elevation: 6
 meteor_m2_sat_min_elevation: 30
@@ -106,6 +109,8 @@ delete_audio: false
 #        direction over the course of the pass, including AOS and LOS
 #   ground_station_location - free-form text for indicating ground station location in image
 #        annotation (leave blank if you wish to exclude the ground station annotation)
+#   antenna_information - free-form text for indicating antenna information in image
+#        annotation (leave blank if you wish to exclude the antenna information annotation)
 #   show_sun_elevation - whether to show sun elevation in annotation
 #   show_pass_direction - show which direction the satellite is moving in the image annotation
 #   noaa_daytime_enhancements - list of enhancements to create images using during daytime captures
@@ -117,19 +122,26 @@ delete_audio: false
 flip_meteor_image: true
 produce_spectrogram: true
 noaa_crop_telemetry: false
-image_annotation_location: 'NorthWest'
-extend_for_annotation: false
+noaa_crop_toptobottom: false
+image_annotation_location: 'North'
+extend_for_annotation: true
 produce_noaa_pristine_image: false
 produce_noaa_pristine_histogram: false
 produce_polar_az_el_graph: false
 produce_polar_direction_graph: true
 ground_station_location: ''
+antenna_information: ''
 show_sun_elevation: true
 show_pass_direction: true
 noaa_daytime_enhancements: 'MCIR MCIR-precip MSA MSA-precip HVC-precip HVCT-precip HVC HVCT ZA therm CC HE HF MD BD MB JF JJ LC TA WV NO sea' 
 noaa_nighttime_enhancements: 'MCIR MCIR-precip HVCT ZA therm NO TA sea'
-noaa_crop_toptobottom: true
 noaa_interpolate: false
+noaa_jpg_image_quality: 90
+meteor_jpg_image_quality: 90
+meteor_create_spreaded_images_without_overlay: true
+meteor_create_rain_probability_overlay: true
+meteor_create_equidistant_projection: true
+meteor_create_mercator_projection: false
 
 # noaa map configurations
 # http://usradioguy.com/wp-content/uploads/2020/05/wxtoimgcommand-line.pdf
@@ -200,9 +212,9 @@ lang_setting: en
 #   web_datetime_format - format to display date and time in the web interface for captures - note that this MUST conform to
 #                         https://www.php.net/manual/en/datetime.format.php or else bad things will happen
 web_server_name: raspberry-noaa.localdomain
-enable_non_tls: false
+enable_non_tls: true
 web_port: 80
-enable_tls: true
+enable_tls: false
 web_tls_port: 443
 cert_valid_days: 365
 lock_admin_page: false
@@ -229,7 +241,7 @@ enable_animation: false
 #   delete_oldest_n - how many oldest captures to delete on each run
 #   delete_older_than_n - delete all images older than this many days
 delete_oldest_n: 0
-delete_older_than_n: 0
+delete_older_than_n: 30
 
 # operating system configurations
 #   disable_wifi_power_mgmt - if running wireless internet and you want to
@@ -255,8 +267,10 @@ enable_email_push: false
 email_push_address: test@ifttt.com
 enable_email_schedule_push: false
 enable_discord_push: false
-discord_webhook_url: ''
+discord_webhook_url: 'https://discord.com/api/webhooks/811418973593403393/Rwz1jn7IqaepgzfbhfhVpwZSvOvjutc4mq2ERtcHUUyWtpPnjx3w6doU1TOPIa4Nf2RX'
 enable_twitter_push: false
+enable_facebook_push: false
+enable_instagram_push: false
 enable_slack_push: false
 slack_push_url: ''
 slack_push_to: ''
