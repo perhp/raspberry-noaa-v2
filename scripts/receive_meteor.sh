@@ -229,7 +229,8 @@ if [[ "$METEOR_DECODER" == "meteordemod" ]]; then
     fi
   fi
 elif [[ "$METEOR_DECODER" == "satdump" ]]; then
-  find "MSU-MR (Filled)/" -type f ! -name "*projected*" ! -name "*corrected*" -delete
+  # keep the corrected/projected composites plus the raw MSU-MR channel images (MSU-MR-1..6)
+  find "MSU-MR (Filled)/" -type f ! -name "*projected*" ! -name "*corrected*" ! -name "MSU-MR-*" -delete
 
   log "Deleting SatDump projected composites which have been generated, but the channels aren't broadcast" "INFO"
   for projected_file in MSU-MR\ \(Filled\)/rgb_msu_mr_rgb_*_projected.png; do
@@ -244,13 +245,18 @@ elif [[ "$METEOR_DECODER" == "satdump" ]]; then
       fi
   done
 
+  # the equirectangular composite variants only exist for their projected output - their
+  # corrected images are identical to the base composite's, so drop the duplicates
+  log "Removing duplicate corrected images from equirectangular composite variants" "INFO"
+  rm -f MSU-MR\ \(Filled\)/*_equirect_corrected.png >> $NOAA_LOG 2>&1
+
   log "Removing images without a map if they exist" "INFO"
   for file in MSU-MR\ \(Filled\)/*map.png; do
     mv "$file" "${file/_map.png/.png}"
   done
 
   log "Flipping Meteor night passes decoded with SatDump" "INFO"
-  for i in MSU-MR\ \(Filled\)/*_corrected.png; do
+  for i in MSU-MR\ \(Filled\)/*_corrected.png MSU-MR\ \(Filled\)/MSU-MR-*.png; do
     $CONVERT "$i" $FLIP "$i" >> $NOAA_LOG 2>&1
   done
 
@@ -324,6 +330,8 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   meteor_suffixes=(
       '-MSA_corrected.jpg'
       '-MSA_projected.jpg'
+      '-Natural_Color_corrected.jpg'
+      '-Natural_Color_projected.jpg'
       '-MCIR_corrected.jpg'
       '-MCIR_projected.jpg'
       '-321_corrected.jpg'
@@ -340,6 +348,13 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
       '-equidistant_654.jpg'
       '-mercator_654.jpg'
       '-spread_654.jpg'
+      '-Day_Microphysics_corrected.jpg'
+      '-Night_Microphysics_corrected.jpg'
+      '-124_corrected.jpg'
+      '-456_corrected.jpg'
+      '-654_corrected.jpg'
+      '-39um_Shortwave_IR_corrected.jpg'
+      '-39um_Shortwave_IR_Calibrated_corrected.jpg'
       '-Thermal_Channel_corrected.jpg'
       '-equidistant_67.jpg'
       '-equidistant_68.jpg'

@@ -200,10 +200,18 @@
     update_cache: no
   when: system_architecture == 'arm64'
   
+# SatDump 1.2.2 packages are only available for 64-bit Bookworm systems;
+# armhf and Bullseye systems stay on the last known-good 1.2.1 build
+- name: Determine SatDump package
+  set_fact:
+    satdump_deb: "{{ 'satdump_1.2.2_bookworm_' + system_architecture + '.deb'
+                     if (raspbian_version.stdout == 'bookworm' and system_architecture in ['arm64', 'amd64'])
+                     else 'satdump_1.2.1-397f9ed6_' + raspbian_version.stdout + '_' + system_architecture + '.deb' }}"
+
 - name: Installing SatDump
   become: yes
   apt:
-    deb: "{{ noaa_home }}/software/satdump_1.2.1-397f9ed6_{{ raspbian_version.stdout }}_{{ system_architecture }}.deb"
+    deb: "{{ noaa_home }}/software/{{ satdump_deb }}"
     state: present
     update_cache: no
 

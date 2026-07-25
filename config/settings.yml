@@ -208,8 +208,13 @@ noaa_map_state_border_enable: true
 noaa_map_state_border_color: "0xffff00"
 wxtoimg_map_offset: 10.5                    #Change this value only if you see map offsets from the ground on WXtoImg NOAA images
 
-meteor_daytime_enhancements: '221 321 124 MSA MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR'
-meteor_nighttime_enhancements: '654 456 MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR'
+# meteor enhancement tokens used by the SatDump decoder (in addition to the meteordemod ones):
+#   39um - 3.9um shortwave IR images (uncalibrated + temperature-calibrated), new with SatDump 1.2.2
+#   fire - night time fire detection composite (off by default)
+# note: meteor_create_equidistant_projection additionally enables equirectangular projected
+#       versions of the main SatDump composites (321/221/MSA/MCIR/Thermal/Night Micro/654)
+meteor_daytime_enhancements: '221 321 124 MSA MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR 39um'
+meteor_nighttime_enhancements: '654 456 MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR 39um'
 flip_meteor_image: true
 meteor_jpg_image_quality: 90
 meteor_draw_map_overlay: true
