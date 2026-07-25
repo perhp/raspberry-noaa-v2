@@ -14,15 +14,26 @@
 # Example:
 #   ./receive_meteor.sh "METEOR-M 2" METEOR-M220210205-192623 1612571183 922 39 Northbound W
 
+# do not pass literal wildcard patterns to commands when a glob matches no files
+shopt -s nullglob
+
 # time keeping
 TIMER_START=$(date '+%s')
 
 # import common lib and settings
+if [ ! -f "$HOME/.noaa-v2.conf" ]; then
+  echo "ERROR: $HOME/.noaa-v2.conf not found - is raspberry-noaa-v2 installed?" >&2
+  exit 1
+fi
 . "$HOME/.noaa-v2.conf"
 . "$NOAA_HOME/scripts/common.sh"
 capture_start="$START_DATE $(date '+%Z')"
 
 # input params
+if [ $# -lt 8 ]; then
+  log "Expected 8 arguments but got $# - aborting: $*" "ERROR"
+  exit 1
+fi
 export SAT_NAME=$1
 export FILENAME_BASE=$2
 export TLE_FILE=$3
@@ -31,6 +42,11 @@ export CAPTURE_TIME=$5
 export SAT_MAX_ELEVATION=$6
 export PASS_DIRECTION=$7
 export PASS_SIDE=$8
+
+if ! [[ "$EPOCH_START" =~ ^[0-9]+$ ]] || ! [[ "$CAPTURE_TIME" =~ ^[0-9]+$ ]]; then
+  log "EPOCH_START ('$EPOCH_START') or CAPTURE_TIME ('$CAPTURE_TIME') is not numeric - aborting" "ERROR"
+  exit 1
+fi
 
 # base directory plus filename_base for re-use
 RAMFS_AUDIO_BASE="${RAMFS_AUDIO}/${FILENAME_BASE}"
@@ -99,6 +115,9 @@ elif [ "$SAT_NAME" == "METEOR-M2 4" ]; then
   export BIAS_TEE=$METEOR_M2_4_ENABLE_BIAS_TEE
   export FREQ_OFFSET=$METEOR_M2_4_FREQ_OFFSET
   export SAT_MIN_ELEV=$METEOR_M2_4_SAT_MIN_ELEV
+else
+  log "Unknown Meteor satellite name: '$SAT_NAME' - no gain/frequency settings exist for it, aborting" "ERROR"
+  exit 1
 fi
 
 interleaving="METEOR_${SAT_NUMBER}_80K_INTERLEAVING"
@@ -132,8 +151,11 @@ else
 fi
 
 # check if there is enough free memory to store pass on RAM
+# (default to 0 if 'free' output could not be parsed so we fall back to SD storage)
 FREE_MEMORY=$(free -m | grep Mem | awk '{print $7}')
-if [ "$FREE_MEMORY" -lt $METEOR_M2_MEMORY_THRESHOLD ]; then
+FREE_MEMORY=${FREE_MEMORY:-0}
+METEOR_M2_MEMORY_THRESHOLD=${METEOR_M2_MEMORY_THRESHOLD:-50}
+if [ "$FREE_MEMORY" -lt "$METEOR_M2_MEMORY_THRESHOLD" ]; then
   log "The system doesn't have enough space to store a Meteor pass on RAM" "INFO"
   log "Free : ${FREE_MEMORY} ; Required : ${METEOR_M2_MEMORY_THRESHOLD}" "INFO"
   RAMFS_AUDIO_BASE="${AUDIO_FILE_BASE}"
@@ -152,12 +174,16 @@ if [ "$PASS_DIRECTION" == "Northbound" ] && [ "$FLIP_METEOR_IMG" == "true" ]; th
 fi
 
 # pass start timestamp and sun elevation
-PASS_START=$(expr "$EPOCH_START" + 90)
+PASS_START=$((EPOCH_START + 90))
 export SUN_ELEV=$(python3 "$SCRIPTS_DIR"/tools/sun.py "$PASS_START")
+if ! [[ "$SUN_ELEV" =~ ^-?[0-9]+$ ]]; then
+  log "Could not determine sun elevation (got '$SUN_ELEV') - defaulting to 0" "ERROR"
+  export SUN_ELEV=0
+fi
 
 # determine if pass is in daylight
 daylight=0
-if [ "${SUN_ELEV}" -gt "${SUN_MIN_ELEV}" ]; then daylight=1; fi
+if [ "${SUN_ELEV}" -gt "${SUN_MIN_ELEV:-0}" ]; then daylight=1; fi
 
 # TODO: Fix this up - this conditional selection is a massive bit of complexity that
 #       needs to be handled, but in the interest of not breaking everything (at least in
@@ -170,10 +196,26 @@ polar_direction=0
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 log "Recording ${NOAA_HOME} via $receiver at ${METEOR_FREQUENCY} MHz using SatDump record " "INFO"
+# NOTE: RAMFS_FILE_BASE is intentionally undefined, so this resolves to "." -
+# SatDump then writes its decode output (the MSU-MR directories) into the
+# current working directory, which is where the satdump decoder branch below
+# expects to find them. Do not "fix" this without also changing those paths.
 audio_temporary_storage_directory="$(dirname "${RAMFS_FILE_BASE}")"
 log "$SATDUMP live meteor_m2-x_lrpt${mode} $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency ${METEOR_FREQUENCY}e6 $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $finish_processing --fill_missing --timeout $CAPTURE_TIME" "INFO"
-$SATDUMP live meteor_m2-x_lrpt${mode} "$audio_temporary_storage_directory" --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${METEOR_FREQUENCY}e6" $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $finish_processing --fill_missing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
-mv "$audio_temporary_storage_directory/meteor_m2-x_lrpt${mode}.cadu" "${RAMFS_AUDIO_BASE}.cadu"
+# wrap SatDump in a watchdog timeout so a hung SDR/capture cannot block the
+# scheduler forever and eat subsequent passes - allow generous extra time
+# beyond the capture itself for --finish_processing to decode the images
+timeout --kill-after=60 $((CAPTURE_TIME + 900)) $SATDUMP live meteor_m2-x_lrpt${mode} "$audio_temporary_storage_directory" --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${METEOR_FREQUENCY}e6" $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $finish_processing --fill_missing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
+satdump_rc=$?
+if [ $satdump_rc -ne 0 ]; then
+  log "SatDump exited with code ${satdump_rc} (124 = watchdog timeout) - continuing with whatever was produced" "ERROR"
+fi
+
+if [ -f "$audio_temporary_storage_directory/meteor_m2-x_lrpt${mode}.cadu" ]; then
+  mv "$audio_temporary_storage_directory/meteor_m2-x_lrpt${mode}.cadu" "${RAMFS_AUDIO_BASE}.cadu" >> $NOAA_LOG 2>&1
+else
+  log "SatDump did not produce a CADU file - capture likely failed (no signal, SDR busy or unplugged?)" "ERROR"
+fi
 
 log "Removing old bmp, gcp, and dat files" "INFO"
 find "$NOAA_HOME/tmp/meteor" -type f \( -name "*.gcp" -o -name "*.bmp" -o -name "*.dat" \) -mtime +1 -delete >> $NOAA_LOG 2>&1
@@ -187,48 +229,64 @@ if [[ "$METEOR_DECODER" == "meteordemod" ]]; then
   #   ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-spectrogram.png" "${IMAGE_THUMB_BASE}-spectrogram.png" >> $NOAA_LOG 2>&1
   # fi
 
-  log "Running MeteorDemod to demodulate OQPSK file, rectify (spread) images, create heat map and composites and convert them to JPG" "INFO"
-  if [[ "$METEOR_${SAT_NUMBER}_80K_INTERLEAVING" == "true" ]]; then
-    $METEORDEMOD -m oqpsk -diff 1 -int 1 -s 80000 -sat $SAT_NAME_METEORDEMOD -t "$TLE_FILE" -f jpg -i "${RAMFS_AUDIO_BASE}.cadu" -o "$NOAA_HOME/tmp/meteor"  >> $NOAA_LOG 2>&1
+  if [ ! -f "${RAMFS_AUDIO_BASE}.cadu" ]; then
+    log "No CADU file available - skipping MeteorDemod decode" "ERROR"
   else
-    $METEORDEMOD -m oqpsk -diff 1 -s 72000 -sat $SAT_NAME_METEORDEMOD -t "$TLE_FILE" -f jpg -i "${RAMFS_AUDIO_BASE}.cadu" -o "$NOAA_HOME/tmp/meteor" >> $NOAA_LOG 2>&1
+    log "Running MeteorDemod to demodulate OQPSK file, rectify (spread) images, create heat map and composites and convert them to JPG" "INFO"
+    if [[ "${!interleaving}" == "true" ]]; then
+      $METEORDEMOD -m oqpsk -diff 1 -int 1 -s 80000 -sat $SAT_NAME_METEORDEMOD -t "$TLE_FILE" -f jpg -i "${RAMFS_AUDIO_BASE}.cadu" -o "$NOAA_HOME/tmp/meteor"  >> $NOAA_LOG 2>&1
+    else
+      $METEORDEMOD -m oqpsk -diff 1 -s 72000 -sat $SAT_NAME_METEORDEMOD -t "$TLE_FILE" -f jpg -i "${RAMFS_AUDIO_BASE}.cadu" -o "$NOAA_HOME/tmp/meteor" >> $NOAA_LOG 2>&1
+    fi
+
+    log "Waiting for files to close" "INFO"
+    sleep 2
+
+    for file in $NOAA_HOME/tmp/meteor/*.jpg; do
+      new_filename=$(echo "$file" | sed -E 's/_([0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+)//')        #This part removes unecessary numbers from the MeteorDemod image names using RegEx
+      if [ "$file" != "$new_filename" ]; then
+        mv "$file" "$new_filename" >> $NOAA_LOG 2>&1
+      fi
+      image_filename=$(basename "$new_filename")
+
+      ${IMAGE_PROC_DIR}/meteor_normalize_annotate.sh "$new_filename" "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
+      ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" "${IMAGE_THUMB_BASE}-${image_filename%.jpg}.jpg" >> $NOAA_LOG 2>&1
+      rm "$new_filename" >> $NOAA_LOG 2>&1
+      push_file_list="$push_file_list ${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg"
+    done
   fi
 
-  log "Waiting for files to close" "INFO"
-  sleep 2
-
-  # for i in -o $NOAA_HOME/tmp/meteor/spread_*.jpg; do
-  #   $CONVERT -quality 100 $FLIP "$i" "$i" >> $NOAA_LOG 2>&1
-  # done
-
-  for file in $NOAA_HOME/tmp/meteor/*.jpg; do
-    new_filename=$(echo "$file" | sed -E 's/_([0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+)//')        #This part removes unecessary numbers from the MeteorDemod image names using RegEx
-    mv "$file" "$new_filename"
-    image_filename=$(basename "$new_filename")
-
-    ${IMAGE_PROC_DIR}/meteor_normalize_annotate.sh "$new_filename" "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
-    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" "${IMAGE_THUMB_BASE}-${image_filename%.jpg}.jpg" >> $NOAA_LOG 2>&1
-    rm "$new_filename"
-    push_file_list="$push_file_list ${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg"
-  done
-
-  if [ "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES}" == "true" ]; then
+  if [ "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES}" == "true" ] && [ -f "${RAMFS_AUDIO_BASE}.cadu" ]; then
     log "Contributing images for creating community composites" "INFO"
-    curl -F "file=@${RAMFS_AUDIO_BASE}.s" "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES_URL}/meteor" >> $NOAA_LOG 2>&1
+    curl -F "file=@${RAMFS_AUDIO_BASE}.cadu" "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES_URL}/meteor" >> $NOAA_LOG 2>&1
   fi
 
   if [ "$DELETE_METEOR_AUDIO" == true ]; then
     log "Deleting audio files" "INFO"
-    rm "${RAMFS_AUDIO_BASE}.cadu" >> $NOAA_LOG 2>&1
+    rm -f "${RAMFS_AUDIO_BASE}.cadu" >> $NOAA_LOG 2>&1
   else
-    if [ "$in_mem" == "true" ]; then
+    if [ "$in_mem" == "true" ] && [ -f "${RAMFS_AUDIO_BASE}.cadu" ]; then
       log "Moving audio files out to the SD card" "INFO"
       mv "${RAMFS_AUDIO_BASE}.cadu" "${AUDIO_FILE_BASE}.cadu" >> $NOAA_LOG 2>&1
-      log "Deleting Meteor audio files older than $DELETE_FILES_OLDER_THAN_DAYS days" "INFO"
-      find /srv/audio/meteor -type f \( -name "*.wav" -o -name "*.s" -o -name "*.cadu" -o -name "*.gcp" -o -name "*.dat" -o -name "*.bmp" \) -mtime +${DELETE_FILES_OLDER_THAN_DAYS} -delete >> $NOAA_LOG 2>&1
+      log "Deleting Meteor audio files older than ${DELETE_FILES_OLDER_THAN_DAYS:-3} days" "INFO"
+      find "${METEOR_AUDIO_OUTPUT}" -type f \( -name "*.wav" -o -name "*.s" -o -name "*.cadu" -o -name "*.gcp" -o -name "*.dat" -o -name "*.bmp" \) -mtime +${DELETE_FILES_OLDER_THAN_DAYS:-3} -delete >> $NOAA_LOG 2>&1
     fi
   fi
 elif [[ "$METEOR_DECODER" == "satdump" ]]; then
+  # make sure the working directory exists even if SatDump failed to decode
+  # anything, so none of the processing below errors out on a missing directory
+  mkdir -p "MSU-MR (Filled)"
+
+  # newer SatDump versions can place generated composites in MSU-MR while
+  # raspberry-noaa-v2 expects to process them from MSU-MR (Filled); copy them
+  # over WITHOUT clobbering (-n) so gap-filled versions are never overwritten
+  # by their unfilled counterparts
+  if [ -d "MSU-MR" ]; then
+    find "MSU-MR" -maxdepth 1 -type f \
+      \( -name "*_corrected.png" -o -name "*_projected.png" \) \
+      -exec cp -n {} "MSU-MR (Filled)/" \; >> $NOAA_LOG 2>&1
+  fi
+
   # keep the corrected/projected composites plus the raw MSU-MR channel images (MSU-MR-1..6)
   find "MSU-MR (Filled)/" -type f ! -name "*projected*" ! -name "*corrected*" ! -name "MSU-MR-*" -delete
 
@@ -273,8 +331,11 @@ elif [[ "$METEOR_DECODER" == "satdump" ]]; then
     new_name="${new_name#rgb_msu_mr_}"
     new_name="${new_name#msu_mr_}"
 
-    # Rename the file with the new name
-    mv "$i" "$path/MSU-MR (Filled)/$new_name" >> $NOAA_LOG 2>&1
+    # Rename the file with the new name (skip when no prefix was stripped,
+    # e.g. the raw MSU-MR-N channel images, to avoid same-file mv errors)
+    if [ "$image_filename" != "$new_name" ]; then
+      mv "$i" "$path/MSU-MR (Filled)/$new_name" >> $NOAA_LOG 2>&1
+    fi
 
     log "Annotating images and creating thumbnails" "INFO"
     ${IMAGE_PROC_DIR}/meteor_normalize_annotate.sh "$path/MSU-MR (Filled)/$new_name" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
@@ -282,36 +343,36 @@ elif [[ "$METEOR_DECODER" == "satdump" ]]; then
     rm "$path/MSU-MR (Filled)/$new_name" >> $NOAA_LOG 2>&1
     push_file_list="$push_file_list ${IMAGE_FILE_BASE}-${new_name%.png}.jpg"
   done
-  rm -r "MSU-MR (Filled)" >> $NOAA_LOG 2>&1
-  rm -r "MSU-MR" >> $NOAA_LOG 2>&1
+  rm -rf "MSU-MR (Filled)" >> $NOAA_LOG 2>&1
+  rm -rf "MSU-MR" >> $NOAA_LOG 2>&1
 
-  if [ "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES}" == "true" ]; then
+  if [ "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES}" == "true" ] && [ -f "${RAMFS_AUDIO_BASE}.cadu" ]; then
     log "Contributing images for creating community composites" "INFO"
     curl -F "file=@${RAMFS_AUDIO_BASE}.cadu" "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES_URL}/meteor" >> $NOAA_LOG 2>&1
   fi
 
   if [ "$DELETE_METEOR_AUDIO" == true ]; then
     log "Deleting audio files" "INFO"
-    rm "${RAMFS_AUDIO_BASE}.cadu" >> $NOAA_LOG 2>&1
+    rm -f "${RAMFS_AUDIO_BASE}.cadu" >> $NOAA_LOG 2>&1
   else
-    if [ "$in_mem" == "true" ]; then
+    if [ "$in_mem" == "true" ] && [ -f "${RAMFS_AUDIO_BASE}.cadu" ]; then
       log "Moving CADU files out to the SD card" "INFO"
       mv "${RAMFS_AUDIO_BASE}.cadu" "${AUDIO_FILE_BASE}.cadu" >> $NOAA_LOG 2>&1
-      log "Deleting Meteor audio files older than $DELETE_FILES_OLDER_THAN_DAYS days" "INFO"
-      find /srv/audio/meteor -type f \( -name "*.wav" -o -name "*.s" -o -name "*.cadu" -o -name "*.gcp" -o -name "*.dat" -o -name "*.bmp" \) -mtime +${DELETE_FILES_OLDER_THAN_DAYS} -delete >> $NOAA_LOG 2>&1
+      log "Deleting Meteor audio files older than ${DELETE_FILES_OLDER_THAN_DAYS:-3} days" "INFO"
+      find "${METEOR_AUDIO_OUTPUT}" -type f \( -name "*.wav" -o -name "*.s" -o -name "*.cadu" -o -name "*.gcp" -o -name "*.dat" -o -name "*.bmp" \) -mtime +${DELETE_FILES_OLDER_THAN_DAYS:-3} -delete >> $NOAA_LOG 2>&1
     fi
   fi
 else
-  echo "Unknown decoder: $METEOR_DECODER"
+  log "Unknown decoder: $METEOR_DECODER" "ERROR"
 fi
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_BASE")*.jpg" -print -quit)" ]; then
+if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_BASE")*.jpg" -print -quit)" ]; then
 
   # determine if auto-gain is set - handles "0" and "0.0" floats
-  gain=$GAIN
-  if [ $(echo "$GAIN==0"|bc) -eq 1 ]; then
+  gain=${GAIN:-0}
+  if [ "$(echo "${GAIN:-0}==0" | bc 2>/dev/null)" == "1" ]; then
     gain='Automatic'
   fi
 
@@ -365,9 +426,11 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   )
 
   # Iterate through the meteor_suffixes array
+  website_suffix=""
   for suffix in "${meteor_suffixes[@]}"; do
       if [[ -f "${IMAGE_THUMB_BASE}${suffix}" ]]; then
-          cp "${IMAGE_THUMB_BASE}${suffix}" "${IMAGE_THUMB_BASE}-website-thumbnail.jpg"
+          cp "${IMAGE_THUMB_BASE}${suffix}" "${IMAGE_THUMB_BASE}-website-thumbnail.jpg" >> $NOAA_LOG 2>&1
+          website_suffix="$suffix"
           break
       fi
   done
@@ -386,8 +449,8 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
                                             $SAT_MIN_ELEV \
                                             $PASS_DIRECTION \
                                             "${IMAGE_FILE_BASE}-polar-azel.jpg" \
-                                            "azel"
-    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-polar-azel.jpg" "${IMAGE_THUMB_BASE}-polar-azel.jpg"
+                                            "azel" >> $NOAA_LOG 2>&1
+    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-polar-azel.jpg" "${IMAGE_THUMB_BASE}-polar-azel.jpg" >> $NOAA_LOG 2>&1
   fi
 
   polar_direction=0
@@ -404,8 +467,8 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
                                             $SAT_MIN_ELEV \
                                             $PASS_DIRECTION \
                                             "${IMAGE_FILE_BASE}-polar-direction.png" \
-                                            "direction"
-    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-polar-direction.png" "${IMAGE_THUMB_BASE}-polar-direction.png"
+                                            "direction" >> $NOAA_LOG 2>&1
+    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-polar-direction.png" "${IMAGE_THUMB_BASE}-polar-direction.png" >> $NOAA_LOG 2>&1
   fi
 
   # check if we got an image, and post-process if so
@@ -413,11 +476,12 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   log "I got a successful jpg images" "INFO"
 
   # insert or replace in case there was already an insert due to the spectrogram creation
-  $SQLITE3 $DB_FILE "INSERT OR REPLACE INTO decoded_passes (pass_start, file_path, daylight_pass, sat_type, has_spectrogram, has_polar_az_el, has_polar_direction, gain) \
-                                      VALUES ($EPOCH_START, \"$FILENAME_BASE\", $daylight, 0, $spectrogram, $polar_az_el, $polar_direction, $GAIN);" >> $NOAA_LOG 2>&1
+  # (use a busy timeout on all database access so a webpanel read can't fail the insert)
+  $SQLITE3 -cmd ".timeout 30000" $DB_FILE "INSERT OR REPLACE INTO decoded_passes (pass_start, file_path, daylight_pass, sat_type, has_spectrogram, has_polar_az_el, has_polar_direction, gain) \
+                                      VALUES ($EPOCH_START, \"$FILENAME_BASE\", $daylight, 0, $spectrogram, $polar_az_el, $polar_direction, ${GAIN:-0});" >> $NOAA_LOG 2>&1
 
-  pass_id=$($SQLITE3 $DB_FILE "SELECT id FROM decoded_passes ORDER BY id DESC LIMIT 1;")
-  $SQLITE3 $DB_FILE "UPDATE predict_passes \
+  pass_id=$($SQLITE3 -cmd ".timeout 30000" $DB_FILE "SELECT id FROM decoded_passes ORDER BY id DESC LIMIT 1;")
+  $SQLITE3 -cmd ".timeout 30000" $DB_FILE "UPDATE predict_passes \
                     SET is_active = 0 \
                     WHERE (predict_passes.pass_start) \
                     IN ( \
@@ -465,7 +529,7 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   # handle Mastodon pushing if enabled
   if [ "${ENABLE_MASTODON_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Mastodon" "INFO"
-    python3 $PUSH_PROC_DIR}/push_mastodon.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
+    python3 ${PUSH_PROC_DIR}/push_mastodon.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
   fi
 
   # handle Bluesky pushing if enabled
@@ -476,10 +540,14 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
 
   # handle Instagram pushing if enabled
   if [ "${ENABLE_INSTAGRAM_PUSH}" == "true" ]; then
-    log "Pushing image enhancements to Instagram" "INFO"
-    $CONVERT "${IMAGE_FILE_BASE}${suffix}" -resize "1080x1350>" -gravity center -background black -extent 1080x1350 "${IMAGE_FILE_BASE}-instagram.jpg"
-    python3 ${PUSH_PROC_DIR}/push_instagram.py "${push_annotation}" $(sed 's|/srv/images/||' <<< "${IMAGE_FILE_BASE}-instagram.jpg") ${WEB_SERVER_NAME} >> $NOAA_LOG 2>&1
-    rm "${IMAGE_FILE_BASE}-instagram.jpg"
+    if [ -n "$website_suffix" ] && [ -f "${IMAGE_FILE_BASE}${website_suffix}" ]; then
+      log "Pushing image enhancements to Instagram" "INFO"
+      $CONVERT "${IMAGE_FILE_BASE}${website_suffix}" -resize "1080x1350>" -gravity center -background black -extent 1080x1350 "${IMAGE_FILE_BASE}-instagram.jpg" >> $NOAA_LOG 2>&1
+      python3 ${PUSH_PROC_DIR}/push_instagram.py "${push_annotation}" $(sed "s|${IMAGE_OUTPUT}/||" <<< "${IMAGE_FILE_BASE}-instagram.jpg") ${WEB_SERVER_NAME} >> $NOAA_LOG 2>&1
+      rm -f "${IMAGE_FILE_BASE}-instagram.jpg"
+    else
+      log "Skipping Instagram push - no suitable source image found" "INFO"
+    fi
   fi
 
   # handle Matrix pushing if enabled
