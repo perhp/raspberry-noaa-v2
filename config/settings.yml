@@ -125,11 +125,6 @@ delete_files_older_than_days: 3
 #   flip_meteor_image - whether the meteor image should be flipped
 #   produce_spectrogram - whether to produce a spectrogram image of the audio recording
 #   noaa_crop_telemetry - whether to crop the left/right telemetry in image captures
-#   image_annotation_location - where to place the annotation in images - valid options are:
-#        NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
-#   extend_for_annotation - whether to create a black extension on the north/south location of
-#        the image to place the annotation into (vs. overlaying on the captured data)
-#        (note: this will ONLY work if the image_annotation_location is NOT one of [West|Center|East])
 #   produce_noaa_pristine_image - whether to produce a pristine image (unmodified) for larger
 #        composite-based use cases
 #   produce_noaa_pristine_histogram - whether to produce a histogram of the NOAA pristine image
@@ -137,12 +132,8 @@ delete_files_older_than_days: 3
 #        azimuth and elevation over the course of the pass, truncated to satellite min elevation
 #   produce_polar_direction_graph - whether to produce a polar graph that shows the pass
 #        direction over the course of the pass, including AOS and LOS
-#   ground_station_location - free-form text for indicating ground station location in image
-#        annotation (leave blank if you wish to exclude the ground station annotation)
-#   antenna_information - free-form text for indicating antenna information in image
-#        annotation (leave blank if you wish to exclude the antenna information annotation)
-#   show_sun_elevation - whether to show sun elevation in annotation
-#   show_pass_direction - show which direction the satellite is moving in the image annotation
+#   ground_station_location - free-form text for indicating ground station location in
+#        push notifications and the emailed pass-list subject (leave blank to exclude)
 #   noaa_daytime_enhancements - list of enhancements to create images using during daytime captures
 #        (note: default value seen includes list of ALL supported image processors excluding 'avi' which must be explicitly added when opting to 'enable_animation' below )
 #   noaa_nighttime_enhancements - list of enhancements to create images using during nighttime captures
@@ -178,14 +169,9 @@ delete_files_older_than_days: 3
 #   noaa_map_country_border_color - color of country borders
 #   noaa_map_state_border_enable - whether to enable state borders in images (Americas only)
 #   noaa_map_state_border_color - color of state borders (Americas only)
-extend_for_annotation: true
-image_annotation_location: 'North'
 produce_polar_az_el_graph: false
 produce_polar_direction_graph: true
 ground_station_location: ''
-antenna_information: ''
-show_sun_elevation: true
-show_pass_direction: true
 produce_spectrogram: false    #NOTE: the spectrogram option here is available for NOAA only, and the spectrogrma produced is from demodulated audio, not IQ baseband file
 
 noaa_crop_telemetry: false

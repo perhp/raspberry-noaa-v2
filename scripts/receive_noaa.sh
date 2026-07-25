@@ -33,7 +33,7 @@ export SAT_MAX_ELEVATION=$6
 export PASS_DIRECTION=$7
 export PASS_SIDE=$8
 
-# export some variables for use in the annotation - note that we do not
+# export some variables for use in downstream processing scripts - note that we do not
 # want to export all of .noaa-v2.conf because it contains sensitive info
 if [ "$SAT_NAME" == "NOAA 15" ]; then
   export GAIN=$NOAA_15_GAIN
@@ -256,7 +256,7 @@ if [ "$NOAA_DECODER" == "wxtoimg" ]; then
   fi
 
   # build images based on enhancements defined
-  log "Normalizing and annotating NOAA images" "INFO"
+  log "Normalizing NOAA images" "INFO"
   for enhancement in $ENHANCEMENTS; do
     export ENHANCEMENT=$enhancement
     log "Decoding image" "INFO"
@@ -270,7 +270,7 @@ if [ "$NOAA_DECODER" == "wxtoimg" ]; then
     fi
 
     if [ -f "${IMAGE_FILE_BASE}-$enhancement.jpg" ]; then
-      ${IMAGE_PROC_DIR}/noaa_normalize_annotate.sh "${IMAGE_FILE_BASE}-$enhancement.jpg" "${IMAGE_FILE_BASE}-$enhancement.jpg" $NOAA_IMAGE_QUALITY 2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG
+      ${IMAGE_PROC_DIR}/noaa_normalize.sh "${IMAGE_FILE_BASE}-$enhancement.jpg" "${IMAGE_FILE_BASE}-$enhancement.jpg" $NOAA_IMAGE_QUALITY 2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG
       ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-$enhancement.jpg" "${IMAGE_THUMB_BASE}-$enhancement.jpg" >> $NOAA_LOG 2>&1
       push_file_list="${push_file_list} ${IMAGE_FILE_BASE}-$enhancement.jpg"
     fi
@@ -309,7 +309,7 @@ elif [ "$NOAA_DECODER" == "satdump" ]; then
       $CONVERT $projected_file $FLIP $projected_file
     done
 
-    log "Normalizing and annotating NOAA images" "INFO"
+    log "Normalizing NOAA images" "INFO"
     for i in *.png; do
       $CONVERT "$i" $FLIP "$i"
 
@@ -334,7 +334,7 @@ elif [ "$NOAA_DECODER" == "satdump" ]; then
       new_name="${new_name//_enhancement}"
       new_name="${new_name//_\(channel_1\)}"
       new_name="${new_name//_\(channel_4\)}"
-      ${IMAGE_PROC_DIR}/noaa_normalize_annotate.sh "$new_file" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $NOAA_IMAGE_QUALITY >> $NOAA_LOG 2>&1
+      ${IMAGE_PROC_DIR}/noaa_normalize.sh "$new_file" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $NOAA_IMAGE_QUALITY >> $NOAA_LOG 2>&1
       ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" "${IMAGE_THUMB_BASE}-${new_name%.png}.jpg" >> $NOAA_LOG 2>&1
       push_file_list="${push_file_list} ${IMAGE_FILE_BASE}-${new_name%.png}.jpg"
       rm $new_file >> $NOAA_LOG 2>&1
@@ -439,7 +439,6 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   fi
 
   # create push annotation string (annotation in the email subject, discord text, etc.)
-  # note this is NOT the annotation on the image, which is driven by the config/annotation/annotation.html.j2 file
   push_annotation=""
   if [ "${GROUND_STATION_LOCATION}" != "" ]; then
     push_annotation="Ground Station: ${GROUND_STATION_LOCATION}"

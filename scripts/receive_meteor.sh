@@ -94,7 +94,7 @@ if [ "$SAT_NAME" == "METEOR-M2 3" ]; then
   SAT_NAME_METEORDEMOD="METEOR-M-2-3"
   METEOR_FREQUENCY=$METEOR_M2_3_FREQ
 
-  # export some variables for use in the annotation - note that we do not
+  # export some variables for use in downstream processing scripts - note that we do not
   # want to export all of .noaa-v2.conf because it contains sensitive info
   export GAIN=$METEOR_M2_3_GAIN
   export SUN_MIN_ELEV=$METEOR_M2_3_SUN_MIN_ELEV
@@ -107,7 +107,7 @@ elif [ "$SAT_NAME" == "METEOR-M2 4" ]; then
   SAT_NAME_METEORDEMOD="METEOR-M-2-4"
   METEOR_FREQUENCY=$METEOR_M2_4_FREQ
 
-  # export some variables for use in the annotation - note that we do not
+  # export some variables for use in downstream processing scripts - note that we do not
   # want to export all of .noaa-v2.conf because it contains sensitive info
   export GAIN=$METEOR_M2_4_GAIN
   export SUN_MIN_ELEV=$METEOR_M2_4_SUN_MIN_ELEV
@@ -249,7 +249,7 @@ if [[ "$METEOR_DECODER" == "meteordemod" ]]; then
       fi
       image_filename=$(basename "$new_filename")
 
-      ${IMAGE_PROC_DIR}/meteor_normalize_annotate.sh "$new_filename" "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
+      ${IMAGE_PROC_DIR}/meteor_normalize.sh "$new_filename" "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
       ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg" "${IMAGE_THUMB_BASE}-${image_filename%.jpg}.jpg" >> $NOAA_LOG 2>&1
       rm "$new_filename" >> $NOAA_LOG 2>&1
       push_file_list="$push_file_list ${IMAGE_FILE_BASE}-${image_filename%.jpg}.jpg"
@@ -318,7 +318,7 @@ elif [[ "$METEOR_DECODER" == "satdump" ]]; then
     $CONVERT "$i" $FLIP "$i" >> $NOAA_LOG 2>&1
   done
 
-    # Renaming files, annotating images, and creating thumbnails
+    # Renaming files, normalizing images, and creating thumbnails
   for i in MSU-MR\ \(Filled\)/*.png; do
     path="$(pwd)"
     image_filename=$(basename "$i")
@@ -337,8 +337,8 @@ elif [[ "$METEOR_DECODER" == "satdump" ]]; then
       mv "$i" "$path/MSU-MR (Filled)/$new_name" >> $NOAA_LOG 2>&1
     fi
 
-    log "Annotating images and creating thumbnails" "INFO"
-    ${IMAGE_PROC_DIR}/meteor_normalize_annotate.sh "$path/MSU-MR (Filled)/$new_name" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
+    log "Normalizing images and creating thumbnails" "INFO"
+    ${IMAGE_PROC_DIR}/meteor_normalize.sh "$path/MSU-MR (Filled)/$new_name" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $METEOR_IMAGE_QUALITY >> $NOAA_LOG 2>&1
     ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" "${IMAGE_THUMB_BASE}-${new_name%.png}.jpg" >> $NOAA_LOG 2>&1
     rm "$path/MSU-MR (Filled)/$new_name" >> $NOAA_LOG 2>&1
     push_file_list="$push_file_list ${IMAGE_FILE_BASE}-${new_name%.png}.jpg"
@@ -377,7 +377,6 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
   fi
 
   # create push annotation string (annotation in the email subject, discord text, etc.)
-  # note this is NOT the annotation on the image, which is driven by the config/annotation/annotation.html.j2 file
   push_annotation=""
   if [ "${GROUND_STATION_LOCATION}" != "" ]; then
     push_annotation="Ground Station: ${GROUND_STATION_LOCATION}"

@@ -156,19 +156,6 @@ backup() {
     exit
   fi
 
-  if [[ -f ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2 ]]; then
-    cp -pr ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2 ${BACKUP_LOC}/annotation.html.j2
-    if [[ $? -eq 0 ]]; then
-      loggit "PASS" "Successfully backed up annotation.html.j2"
-    else
-      loggit "FAIL" "Failed to backup annotation.html.j2, aborting..."
-      exit 1
-    fi
-  else
-    loggit "FAIL" "${HOME}/raspberry-noaa-v2/config/settings.yml, not found, aborting..."
-    exit
-  fi
-
   if [[ -f ${HOME}/raspberry-noaa-v2/db/panel.db ]]; then
     cp -pr ${HOME}/raspberry-noaa-v2/db/panel.db ${BACKUP_LOC}/panel.db
     if [[ $? -eq 0 ]]; then
@@ -322,25 +309,6 @@ restore() {
   else
     loggit "FAIL" "${BACKUP_LOC}/settings.yml not found, aborting..."
     exit 1
-  fi
-
-  if [[ -f ${BACKUP_LOC}/annotation.html.j2 ]]; then
-    # Keep github original
-    if [[ ! -f ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2.original ]]; then
-      if [[ -f ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2 ]]; then
-        cp -pr ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2 ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2.original
-      fi
-    fi
-    cp -pr ${BACKUP_LOC}/annotation.html.j2 ${HOME}/raspberry-noaa-v2/config/annotation/annotation.html.j2
-    if [[ $? -eq 0 ]]; then
-      loggit "PASS" "Successfully restored annotation.html.j2"
-    else
-      loggit "FAIL" "Failed to restore annotation.html.j2, aborting..."
-      exit 1
-    fi
-  else
-    loggit "FAIL" "${BACKUP_LOC}/annotation.html.j2, not found, aborting..."
-    exit
   fi
 
   if [[ -f ${BACKUP_LOC}/panel.db ]]; then

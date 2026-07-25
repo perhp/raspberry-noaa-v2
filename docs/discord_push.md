@@ -31,4 +31,4 @@ If all goes well, you should see a message and associated image show up on your 
 ## Profit
 
 Once the above have been performed, simply wait until your next capture occurs and you should then see messages pop up in your Discord
-channel with annotations indicating the satellite, pass, etc. (similar annotation to the image annotation).
+channel with text indicating the satellite, pass, etc.

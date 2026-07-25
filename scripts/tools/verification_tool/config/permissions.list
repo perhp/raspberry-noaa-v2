@@ -23,7 +23,6 @@ directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templates
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/assets
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/config
-directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/config/annotation
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/db_backups
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/docs
@@ -59,7 +58,6 @@ directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/j
 directory 755 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/web_img
 directory 770 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/ramfs_path
 directory 770 $USER www-data /home/$USER/raspberry-noaa-v2/db
-file 600 $USER $USER /home/$USER/raspberry-noaa-v2/config/annotation/annotation.html.j2
 file 644 $USER $USER /home/$USER/.config/meteordemod/kernels/tps.cl
 file 644 $USER $USER /home/$USER/.config/meteordemod/rain.bmp
 file 644 $USER $USER /home/$USER/.config/meteordemod/settings.ini
@@ -96,7 +94,6 @@ file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/group_vars/all.yml
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/hosts
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/common/files/52-airspy.rules
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/common/files/airspy-blacklist.conf
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/common/files/annotation.html.j2_file
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/common/files/blacklist-msi.conf
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/common/files/disable-wifi-powermgmt.service
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/common/files/facebook.conf
@@ -143,7 +140,6 @@ file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/06_add_polar_az
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/07_add_polar_direction_bool.sql
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/08_add_histogram_bool.sql
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/09_add_at_job_id.sql
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/docs/annotation.md
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/docs/assets/images/webpanel-admin.jpg
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/docs/assets/images/webpanel-captures.jpg
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/docs/assets/images/webpanel-pass-list.jpg
@@ -245,11 +241,11 @@ file 755 $USER $USER /home/$USER/raspberry-noaa-v2/docs/assets/images/scan_annot
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/install_and_upgrade.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/common.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/histogram.sh
-file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/meteor_normalize_annotate.sh
+file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/meteor_normalize.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/noaa_avi.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/noaa_enhancements.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/noaa_histogram_data.sh
-file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/noaa_normalize_annotate.sh
+file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/noaa_normalize.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/noaa_pristine.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/polar_plot.py
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/image_processors/spectrogram.sh
@@ -271,7 +267,6 @@ file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/schedule.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/select_best_overlapping_passes.py
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/generate_waterfall.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/heatmap.py
-file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/produce_annotation_image.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/scan_for.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/start_scanning.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/stop_and_finalize_scanning.sh
@@ -279,7 +274,6 @@ file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/t2sec.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/testing/test_reception.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/tools/atrm_rule_and_removal.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/tools/db_backup.sh
-file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/tools/jinja2_to_file.py
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/tools/scratch_perms.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/tools/set_os_config_kernel8.sh
 file 755 $USER $USER /home/$USER/raspberry-noaa-v2/scripts/tools/sun.py
