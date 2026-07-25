@@ -200,18 +200,12 @@
     update_cache: no
   when: system_architecture == 'arm64'
   
-# SatDump 1.2.2 packages are only available for 64-bit Bookworm systems;
-# armhf and Bullseye systems stay on the last known-good 1.2.1 build
-- name: Determine SatDump package
-  set_fact:
-    satdump_deb: "{{ 'satdump_1.2.2_bookworm_' + system_architecture + '.deb'
-                     if (raspbian_version.stdout == 'bookworm' and system_architecture in ['arm64', 'amd64'])
-                     else 'satdump_1.2.1-397f9ed6_' + raspbian_version.stdout + '_' + system_architecture + '.deb' }}"
-
+# SatDump packages are only provided for 64-bit Bookworm (arm64/amd64),
+# the only supported targets
 - name: Installing SatDump
   become: yes
   apt:
-    deb: "{{ noaa_home }}/software/{{ satdump_deb }}"
+    deb: "{{ noaa_home }}/software/satdump_1.2.2_bookworm_{{ system_architecture }}.deb"
     state: present
     update_cache: no
 
@@ -337,11 +331,4 @@
 #   command: ln -s /usr/lib/arm-linux-gnueabihf/libEGL.so /usr/lib/libbrcmEGL.so
 #   become: yes
 #   when: not libEGL_link.stat.exists and system_architecture == 'armhf'
-
-# - name: Installing AnyDesk remote desktop
-#   become: yes
-#   apt:
-#     deb: "{{ noaa_home }}/software/anydesk_6.3.0-1_{{ system_architecture }}.deb"
-#     state: present
-#     update_cache: no
 ...
