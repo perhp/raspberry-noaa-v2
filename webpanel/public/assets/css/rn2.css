@@ -1,23 +1,23 @@
 /* ------------------------------------------------------------------ */
-/* raspberry-noaa-v2 webpanel — night-ops console design system        */
+/* raspberry-noaa-v2 webpanel — ops console design system (light)      */
 /* Self-contained: no CDN frameworks, no webfonts (offline stations).  */
 /* ------------------------------------------------------------------ */
 
 :root {
-  --bg: #0c111c;
-  --panel: #121a29;
-  --raised: #192436;
-  --line: #26334a;
-  --line-soft: #1d2940;
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --raised: #e7ebf2;
+  --line: #c7d0dd;
+  --line-soft: #dde3ec;
 
-  --ink: #e8eef7;
-  --dim: #93a4bd;
-  --faint: #7488a6;
+  --ink: #1b2534;
+  --dim: #4f6076;
+  --faint: #7f8da1;
 
-  --amber: #ffb45c;
-  --green: #5ec98a;
-  --red: #ff6b5c;
-  --blue: #6fb0ff;
+  --amber: #b06e0e;
+  --green: #22874d;
+  --red: #cc3a2b;
+  --blue: #2268c2;
 
   --font-display: "Bahnschrift", "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --font-body: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -157,20 +157,6 @@ main.wrap {
   padding: 1.5rem 1.25rem 3rem;
 }
 
-.site-footer {
-  border-top: 1px solid var(--line-soft);
-  padding: 1.25rem;
-  text-align: center;
-}
-
-.site-footer img {
-  height: 42px;
-  opacity: 0.75;
-  transition: opacity 120ms ease;
-}
-
-.site-footer a:hover img { opacity: 1; }
-
 /* Section eyebrow: engraved panel label */
 .panel-label {
   display: flex;
@@ -223,7 +209,7 @@ main.wrap {
   overflow: hidden;
 }
 
-.instrument-body { background: #060a12; }
+.instrument-body { background: #dfe4ec; }
 
 .instrument-body iframe {
   display: block;
@@ -288,7 +274,7 @@ table.telemetry td {
 
 table.telemetry tbody tr:last-child td { border-bottom: 0; }
 
-table.telemetry tbody tr:hover td { background: rgba(111, 176, 255, 0.04); }
+table.telemetry tbody tr:hover td { background: rgba(34, 104, 194, 0.06); }
 
 table.telemetry .num,
 table.telemetry .mono {
@@ -346,12 +332,12 @@ table.telemetry td.no-passes {
   display: block;
 }
 
-.lamp-done    { border-color: rgba(94, 201, 138, 0.5);  color: var(--green); }
-.lamp-running { border-color: rgba(255, 180, 92, 0.6);  color: var(--amber); background: rgba(255, 180, 92, 0.12); }
-.lamp-processing { border-color: rgba(255, 180, 92, 0.6); color: var(--amber); }
-.lamp-next    { border-color: rgba(111, 176, 255, 0.5); color: var(--blue); }
-.lamp-conflict{ border-color: rgba(255, 107, 92, 0.6);  color: var(--red); }
-.lamp-failed  { border-color: rgba(255, 107, 92, 0.6);  color: var(--red); }
+.lamp-done    { border-color: rgba(34, 135, 77, 0.5);  color: var(--green); }
+.lamp-running { border-color: rgba(176, 110, 14, 0.6);  color: var(--amber); background: rgba(176, 110, 14, 0.12); }
+.lamp-processing { border-color: rgba(176, 110, 14, 0.6); color: var(--amber); }
+.lamp-next    { border-color: rgba(34, 104, 194, 0.5); color: var(--blue); }
+.lamp-conflict{ border-color: rgba(204, 58, 43, 0.6);  color: var(--red); }
+.lamp-failed  { border-color: rgba(204, 58, 43, 0.6);  color: var(--red); }
 .lamp-missed  { color: var(--faint); }
 
 /* keep failed passes legible even on dimmed (inactive) rows */
@@ -360,8 +346,8 @@ table.telemetry tr.inactive .lamp-failed { opacity: 0.75; }
 @media (prefers-reduced-motion: no-preference) {
   .lamp-running { animation: lamp-pulse 2s ease-in-out infinite; }
   @keyframes lamp-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 92, 0.35); }
-    50%      { box-shadow: 0 0 0 5px rgba(255, 180, 92, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(176, 110, 14, 0.35); }
+    50%      { box-shadow: 0 0 0 5px rgba(176, 110, 14, 0); }
   }
   .lamp-processing svg { animation: lamp-spin 1.6s linear infinite; }
   @keyframes lamp-spin {
@@ -433,7 +419,7 @@ table.telemetry tr.inactive .lamp-failed { opacity: 0.75; }
   align-items: center;
   justify-content: center;
   height: 200px;
-  background: #060a12;
+  background: #dfe4ec;
 }
 
 .plate-img img {
@@ -568,8 +554,8 @@ main.wrap > .pager:last-child { margin: 1rem 0 0; }
   align-items: flex-start;
   padding: 0.75rem 1rem;
   margin: 0 0 1rem;
-  background: rgba(255, 107, 92, 0.07);
-  border: 1px solid rgba(255, 107, 92, 0.35);
+  background: rgba(204, 58, 43, 0.07);
+  border: 1px solid rgba(204, 58, 43, 0.35);
   border-radius: 6px;
   color: var(--dim);
   font-size: 0.85rem;
@@ -624,14 +610,14 @@ main.wrap > .pager:last-child { margin: 1rem 0 0; }
 }
 
 .alert-success {
-  background: rgba(94, 201, 138, 0.09);
-  border: 1px solid rgba(94, 201, 138, 0.4);
+  background: rgba(34, 135, 77, 0.09);
+  border: 1px solid rgba(34, 135, 77, 0.4);
   color: var(--green);
 }
 
 .alert-error {
-  background: rgba(255, 107, 92, 0.09);
-  border: 1px solid rgba(255, 107, 92, 0.4);
+  background: rgba(204, 58, 43, 0.09);
+  border: 1px solid rgba(204, 58, 43, 0.4);
   color: var(--red);
 }
 
@@ -661,7 +647,7 @@ dialog.confirm {
 }
 
 dialog.confirm::backdrop {
-  background: rgba(4, 7, 13, 0.7);
+  background: rgba(27, 37, 52, 0.45);
 }
 
 dialog.confirm .dialog-head {
@@ -705,8 +691,8 @@ dialog.confirm .dialog-foot {
 .btn:hover { border-color: var(--dim); text-decoration: none; }
 
 .btn.btn-danger {
-  border-color: rgba(255, 107, 92, 0.5);
-  background: rgba(255, 107, 92, 0.12);
+  border-color: rgba(204, 58, 43, 0.5);
+  background: rgba(204, 58, 43, 0.12);
   color: var(--red);
 }
 
