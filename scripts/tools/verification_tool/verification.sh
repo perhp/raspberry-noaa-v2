@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Purpose: The purpose of this verification script is to attempt to verify the RN2 environment 
+# Purpose: The purpose of this verification script is to attempt to verify the RN2 environment
 #          is installed and configured correctly. It checks permissions, file/directory ownership,
-#          group permissions, package dependencies are met, key programs like satdump, meteordemod,
-#          wxtoimg and wxmap are linked and execute without error during a dry run.o
+#          group permissions, package dependencies are met, key programs like satdump and
+#          meteordemod are linked and execute without error during a dry run.
 #
 # Author:  Richard Creasey (AI4Y)
 #
@@ -53,10 +53,8 @@ secs_to_human() {
 LANG=POSIX
 VALIDATION_LOG=/var/log/raspberry-noaa-v2/verification.log
 PERMISSIONS_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/permissions.list
-PERMISSIONS_ARM64_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/permissions_arm64.list
 PERMISSIONS_OTHER_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/permissions_other.list
 PACKAGE_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/package.list
-PACKAGE_ARM64_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/package_arm64.list
 TEST_FILES=$HOME/raspberry-noaa-v2/scripts/tools/verification_tool/test_files
 mkdir -p -m 755 ${TEST_FILES}/tmp
 declare -A levels=([PASS]=1 [FAIL]=2 [INFO]=3)
@@ -75,7 +73,6 @@ LDD=$(which ldd)
 # Translate or skip package names that differ on Trixie:
 # - satdump is built from source there (no dpkg entry; validated by dry run)
 # - wkhtmltopdf was removed from Debian Trixie (optional feature, auto-skipped)
-# - libasound2 was renamed libasound2t64 in the time64 transition
 # - libvolk2-dev/libncurses5-dev/libncursesw5-dev/libatlas-base-dev were
 #   replaced by libvolk-dev/libncurses-dev/libopenblas-dev
 adjust_package_for_os() {
@@ -84,20 +81,12 @@ adjust_package_for_os() {
     case ${package} in
       satdump|wkhtmltopdf|libatlas-base-dev|libncurses5-dev|libncursesw5-dev) echo "" ;;
       libvolk2-dev) echo "libvolk-dev" ;;
-      libasound2:armhf) echo "libasound2t64:armhf" ;;
       *) echo "${package}" ;;
     esac
   else
     echo "${package}"
   fi
 }
-
-if [[ ${ARCH} == "arm64" ]]; then
-  LDD=$(which ldd)
-  LDD32=/tmp/ldd32
-  cat ${LDD} | sed -e 's/ld-linux-aarch64.so.1/ld-linux-armhf.so.3/' > ${LDD32}
-  chmod +x ${LDD32}
-fi
 
 # loggit function
 loggit() {
@@ -200,12 +189,6 @@ while IFS= read -r line; do
   perms ${line}
 done < ${PERMISSIONS_LIST}
 
-if [[ ${ARCH} == "arm64" ]]; then
-  while IFS= read -r line; do
-    perms ${line}
-  done < ${PERMISSIONS_ARM64_LIST}
-fi
-
 while IFS= read -r line; do
   # ntpsec on Trixie keeps its config under /etc/ntpsec instead of /etc/ntp.conf
   if [[ ${OS} == "trixie" ]]; then
@@ -232,27 +215,12 @@ while IFS= read -r line; do
   fi
 done < ${PACKAGE_LIST}
 
-if [[ ${ARCH} == "arm64" ]]; then
-  while IFS= read -r line; do
-    line=$(adjust_package_for_os ${line})
-    [[ -z "${line}" ]] && continue
-    package_status=$(dpkg-query -W ${line} | head -1)
-    if [[ "${package_status}" == *"no packages found matching"* ]]; then
-      loggit "FAIL" "${package_status}"
-      FAILURES=$(expr ${FAILURES} + 1)
-    else
-      loggit "PASS" "${package_status}"
-      PASSES=$(expr ${PASSES} + 1)
-    fi
-  done < ${PACKAGE_ARM64_LIST}
-fi
-
 loggit "INFO" ""
 loggit "INFO" "*************************************************"
 loggit "INFO" "*** Checking required PIP packages ***"
 loggit "INFO" "*************************************************"
 
-pip list > ${PIP_LOG}
+$HOME/.rn2_venv/bin/pip list > ${PIP_LOG}
 for pip_package in envbash facebook;
 do 
   v_result=$(cat ${PIP_LOG} | grep ${pip_package});
@@ -303,23 +271,12 @@ METEORDEMOD="/usr/local/bin/meteordemod"
 METEORDEMOD_QCMD="${METEORDEMOD} -h"
 METEORDEMOD_CMD="${METEORDEMOD} -m oqpsk -diff 1 -s 72000 -sat 'METEOR-M-2-3' -t '${TEST_FILES}/meteordemod-input.tle' -f jpg -i '${TEST_FILES}/meteordemod-input.cadu' -o '${TEST_FILES}/tmp'"
 
-WXMAP="/usr/local/bin/wxmap"
-WXMAP_CMD="${WXMAP} -T 'NOAA 15' -H '${TEST_FILES}/wxtoimg-input.tle' -p 0  -l 1 -c l:0xcc3030 -g 10.0 -c g:0xff0000 -C 1 -c C:0xffff00 -S 1 -c S:0xffff00 -o '1721222580' '${TEST_FILES}/wxtoimg-map-output.png' 2>&1 | grep -Ev 'invalid pointer|Aborted'"
-
-WXTOIMG="/usr/local/bin/wxtoimg"
-WXTOIMG_CMD="${WXTOIMG} -o -m ${TEST_FILES}/wxtoimg-map-input.png  -c -I -e MCIR ${TEST_FILES}/wxtoimg-input.wav ${TEST_FILES}/wxtoimg-mcir-output.jpg 2>&1 | grep -Ev 'invalid pointer|Aborted'"
-
-for BIN in ${NGINX} ${SATDUMP} ${WXMAP} ${WXTOIMG} ${METEORDEMOD} ;
-do 
+for BIN in ${NGINX} ${SATDUMP} ${METEORDEMOD} ;
+do
   BINNAME=$(echo ${BIN} | awk -F"/" '{print $NF}' | tr '[:lower:]' '[:upper:]')
   BINCMD="${BINNAME}_CMD"
 
-  if [[ ${ARCH} == "arm64" && ${BINNAME} == "WXTOIMG" || ${ARCH} == "arm64" && ${BINNAME} == "WXMAP" ]]; then
-    # We are on ARM64 with 32-bit executables, so we must use the modified ldd script to ensure proper results when checking libraries link
-    v_lddresult=$(${LDD32} ${BIN} | grep -i "not found" | wc -l)
-  else
-    v_lddresult=$(${LDD} ${BIN} | grep -i "not found" | wc -l)
-  fi
+  v_lddresult=$(${LDD} ${BIN} | grep -i "not found" | wc -l)
 
   if [[ ${v_lddresult} -eq 0 ]]; then
     loggit "PASS" "${BIN} has all required libraries"
@@ -327,8 +284,7 @@ do
 
     # Perform Dry run execution since all libraries are dynamiclly linked
     #
-    # Writing test command to a file to call for execution. SATDUMP and METEORDEMOD could be called 
-    # directly from varible, but WXMAP and WXTOIMG arguments would not pass correctly 
+    # Writing test command to a file to call for execution so quoted arguments pass correctly
     echo ${!BINCMD} > ${BIN_SCRIPT};chmod +x ${BIN_SCRIPT}
     if [[ ${BINNAME} == 'METEORDEMOD' && ${vMODE} == "FULL" ]]; then
       loggit "INFO" "*** FULL mode choosen *** - Please wait for meteordemod testing to complete... ~ 4 minutes"
@@ -388,12 +344,6 @@ loggit "INFO" "************** Ending Validation ****************"
 ##################################################
 # Clean up temporary files used during execution #
 ##################################################
-
-if [[ ${ARCH} == "arm64" ]]; then
-  if [[ -f ${LDD32} ]]; then
-    \rm ${LDD32}
-  fi 
-fi
 
 if [[ -f  ${BIN_SCRIPT} ]]; then
   \rm -f ${BIN_SCRIPT} ${PIP_LOG} raw_*.png product.cbor dataset.json APT-*.png ${TEST_FILES}/tmp/*.bmp ${TEST_FILES}/tmp/*.dat 2>/dev/null

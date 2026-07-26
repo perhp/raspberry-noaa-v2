@@ -7,30 +7,6 @@
     group: "{{ target_user }}"
     mode: 0644
 
-- name: predict directory
-  file:
-    path: /home/{{ target_user }}/.predict
-    state: directory
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: 0755
-
-- name: predict config file
-  template:
-    src: predict.qth.j2
-    dest: /home/{{ target_user }}/.predict/predict.qth
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: 0644
-
-- name: wxtoimg config file
-  template:
-    src: wxtoimgrc.j2
-    dest: /home/{{ target_user }}/.wxtoimgrc
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: 0644
-
 - name: MeteorDemod config settings.ini file
   template:
     src: settings.ini.j2
@@ -46,14 +22,6 @@
     dest: /usr/share/satdump/satdump_cfg.json
     owner: root
     group: root
-    mode: 0644
-
-- name: wxtoimg license terms acceptance file
-  copy:
-    src: wxtoimglic
-    dest: /home/{{ target_user }}/.wxtoimglic
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
     mode: 0644
 
 - name: log directory for raspberry-noaa-v2 logs

@@ -5,11 +5,11 @@
 #            1. Satellite Name
 #            2. Name of script to call for reception
 #            3. TLE file
-#            4. Start time to predict passes (ms)
-#            5. End time to predict passes (ms)
+#            4. Start time to predict passes (epoch seconds)
+#            5. End time to predict passes (epoch seconds)
 #
 # Example:
-#   ./schedule_captures.sh "NOAA 18" "receive_noaa.sh" "weather.tle" 1617422399 1617425300
+#   ./schedule_captures.sh "NOAA 18" "receive_noaa.sh" "orbit.tle" 1617422399 1617425300
 
 # import common lib and settings
 . "$HOME/.noaa-v2.conf"
@@ -41,33 +41,26 @@ if [ "$OBJ_NAME" == "METEOR-M2 4" ]; then
   SAT_MIN_ELEV=$METEOR_M2_4_SAT_MIN_ELEV
 fi
 
-# come up with prediction start/end timings for pass
-predict_start=$($PREDICT -t $TLE_FILE -p "${OBJ_NAME}" "${START_TIME_MS}" | head -1)
-predict_end=$($PREDICT   -t $TLE_FILE -p "${OBJ_NAME}" "${START_TIME_MS}" | tail -1)
-max_elev=$($PREDICT      -t $TLE_FILE -p "${OBJ_NAME}" "${START_TIME_MS}" | awk -v max=0 '{if($5>max){max=$5}}END{print max}')
-azimuth_at_max=$($PREDICT   -t $TLE_FILE -p "${OBJ_NAME}" "${START_TIME_MS}" | awk -v max=0 -v az=0 '{if($5>max){max=$5;az=$6}}END{print az}')
-end_epoch_time=$(echo "${predict_end}" | cut -d " " -f 1)
-starting_azimuth=$(echo "${predict_start}" | awk '{print $6}')
+# predict the passes within the scheduling window and schedule each one -
+# pass_predict.py emits one pass per line:
+#   <start_epoch> <end_epoch> <max_elev> <start_azimuth> <azimuth_at_max>
+while read -r start_epoch_time end_epoch_time max_elev starting_azimuth azimuth_at_max; do
+  file_date_ext=$(date --utc --date="@${start_epoch_time}" +%Y%m%d-%H%M%S)
 
-# get and schedule passes for user-defined days
-while [ "$(date --date="@${end_epoch_time}" +"%s")" -le "${END_TIME_MS}" ]; do
-  start_datetime=$(echo "$predict_start" | cut -d " " -f 3-4)
-  start_epoch_time=$(echo "$predict_start" | cut -d " " -f 1)
-  start_time_seconds=$(echo "$start_datetime" | cut -d " " -f 2 | cut -d ":" -f 3)
-  timer=$(expr "${end_epoch_time}" - "${start_epoch_time}" + "${start_time_seconds}")
-  #file_date_ext=$(date --date="TZ=\"UTC\" ${start_datetime}" +%Y%m%d-%H%M%S)
-  file_date_ext=$(date --utc --date="${start_datetime}" +%Y%m%d-%H%M%S)
+  # 'at' only schedules on minute boundaries, so extend the capture duration
+  # by the seconds the job will start ahead of the actual pass start
+  timer=$((end_epoch_time - start_epoch_time + start_epoch_time % 60))
 
   schedule_enabled_by_sun_elev=1
   if [ "$OBJ_NAME" == "METEOR-M2 3" ]; then
-      START_SUN_ELEV=$(python3 "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
+      START_SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
       if [ "${START_SUN_ELEV}" -lt "${METEOR_M2_3_SCHEDULE_SUN_MIN_ELEV}" ]; then
         log "Not scheduling Meteor-M2 3 with START TIME $start_epoch_time because $START_SUN_ELEV is below configured minimum sun elevation $METEOR_M2_3_SCHEDULE_SUN_MIN_ELEV" "INFO"
         schedule_enabled_by_sun_elev=0
       fi
   fi
   if [ "$OBJ_NAME" == "METEOR-M2 4" ]; then
-      START_SUN_ELEV=$(python3 "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
+      START_SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
       if [ "${START_SUN_ELEV}" -lt "${METEOR_M2_4_SCHEDULE_SUN_MIN_ELEV}" ]; then
         log "Not scheduling Meteor-M2 4 with START TIME $start_epoch_time because $START_SUN_ELEV is below configured minimum sun elevation $METEOR_M2_4_SCHEDULE_SUN_MIN_ELEV" "INFO"
         schedule_enabled_by_sun_elev=0
@@ -101,7 +94,7 @@ while [ "$(date --date="@${end_epoch_time}" +"%s")" -le "${END_TIME_MS}" ]; do
     log "Scheduling capture for: ${safe_obj_name} ${file_date_ext} ${max_elev}" "INFO"
     job_output=$(echo "${NOAA_HOME}/scripts/${RECEIVE_SCRIPT} \"${OBJ_NAME}\" ${safe_obj_name}-${file_date_ext} ${TLE_FILE} \
                                                               ${start_epoch_time} ${timer} ${max_elev} ${direction} ${pass_side}" \
-                | at "$(date --date="TZ=\"UTC\" ${start_datetime}" +"%H:%M %D")" ${mail_arg} 2>&1)
+                | at "$(date --date="@${start_epoch_time}" +"%H:%M %D")" ${mail_arg} 2>&1)
 
     # attempt to capture the job id if job scheduling succeeded
     at_job_id=$(echo $job_output | sed -n 's/.*job \([0-9]\+\) at.*/\1/p')
@@ -114,12 +107,4 @@ while [ "$(date --date="@${end_epoch_time}" +"%s")" -le "${END_TIME_MS}" ]; do
       $SQLITE3 $DB_FILE "INSERT OR REPLACE INTO predict_passes (sat_name,pass_start,pass_end,max_elev,is_active,pass_start_azimuth,azimuth_at_max,direction,at_job_id) VALUES (\"${OBJ_NAME}\",$start_epoch_time,$end_epoch_time,$max_elev,1,$starting_azimuth,$azimuth_at_max,'$direction',$at_job_id);"
     fi
   fi
-
-  next_predict=$(expr "${end_epoch_time}" + 60)
-  predict_start=$($PREDICT -t $TLE_FILE -p "${OBJ_NAME}" "${next_predict}" | head -1)
-  predict_end=$($PREDICT   -t $TLE_FILE -p "${OBJ_NAME}" "${next_predict}" | tail -1)
-  max_elev=$($PREDICT      -t $TLE_FILE -p "${OBJ_NAME}" "${next_predict}" | awk -v max=0 '{if($5>max){max=$5}}END{print max}')
-  azimuth_at_max=$($PREDICT   -t $TLE_FILE -p "${OBJ_NAME}" "${next_predict}" | awk -v max=0 -v az=0 '{if($5>max){max=$5;az=$6}}END{print az}')
-  end_epoch_time=$(echo "${predict_end}" | cut -d " " -f 1)
-  starting_azimuth=$(echo "${predict_start}" | awk '{print $6}')
-done
+done < <("$PYTHON" "$SCRIPTS_DIR/tools/pass_predict.py" "$TLE_FILE" "$OBJ_NAME" "$START_TIME_MS" "$END_TIME_MS" "$LAT" "$LON" "$ALT")

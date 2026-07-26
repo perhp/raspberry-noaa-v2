@@ -10,6 +10,9 @@ NOAA_ANIMATION_OUTPUT={{ noaa_animation_output }}
 RAMFS_AUDIO={{ ramfs_path }}
 NOAA_LOG={{ log_file }}
 
+# Python interpreter (RN2 virtualenv with system site-packages plus pip-only modules)
+PYTHON=/home/{{ target_user }}/.rn2_venv/bin/python3
+
 # Location and Coordinates
 LAT={{ latitude }}
 LON={{ longitude }}
@@ -89,21 +92,8 @@ DISABLE_AT_MAIL={{ disable_at_mail|lower }}
 
 # Image Processing
 NOAA_CROP_TOPTOBOTTOM={{ noaa_crop_toptobottom|lower }}
-NOAA_INTERPOLATE={{ noaa_interpolate|lower }}
-NOAA_MAP_CROSSHAIR_ENABLE={{ noaa_map_crosshair_enable|lower }}
-NOAA_MAP_CROSSHAIR_COLOR={{ noaa_map_crosshair_color }}
-NOAA_MAP_GRID_DEGREES={{ noaa_map_grid_degrees }}
-NOAA_MAP_GRID_COLOR={{ noaa_map_grid_color }}
-NOAA_MAP_COUNTRY_BORDER_ENABLE={{ noaa_map_country_border_enable|lower }}
-NOAA_MAP_COUNTRY_BORDER_COLOR={{ noaa_map_country_border_color }}
-NOAA_MAP_STATE_BORDER_ENABLE={{ noaa_map_state_border_enable|lower }}
-NOAA_MAP_STATE_BORDER_COLOR={{ noaa_map_state_border_color }}
-WXTOIMG_MAP_OFFSET={{ wxtoimg_map_offset }}
 NOAA_THERMAL_TEMP_OVERLAY={{ noaa_thermal_temp_overlay|lower }}
 NOAA_THERMAL_TEMP_OVERLAY_LOCATION={{ noaa_thermal_temp_overlay_location }}
-PRODUCE_SPECTROGRAM={{ produce_spectrogram|lower }}
-PRODUCE_NOAA_PRISTINE={{ produce_noaa_pristine_image|lower }}
-PRODUCE_NOAA_PRISTINE_HISTOGRAM={{ produce_noaa_pristine_histogram|lower }}
 PRODUCE_POLAR_AZ_EL={{ produce_polar_az_el_graph|lower }}
 PRODUCE_POLAR_DIRECTION={{ produce_polar_direction_graph|lower }}
 FLIP_METEOR_IMG={{ flip_meteor_image|lower }}
@@ -116,11 +106,7 @@ PRUNE_OLDEST={{ delete_oldest_n }}
 
 # Receiver and Decoder Configuration
 RECEIVER_TYPE={{ receiver_type }}
-NOAA_DECODER={{ noaa_decoder }}
 METEOR_DECODER={{ meteor_decoder }}
-
-# Telemetry
-NOAA_CROP_TELEMETRY={{ noaa_crop_telemetry|lower }}
 
 # Ground Station and Enhancements
 GROUND_STATION_LOCATION='{{ ground_station_location }}'

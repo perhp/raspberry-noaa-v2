@@ -151,12 +151,6 @@ else
   bias_tee_option=""
 fi
 
-if [ "$NOAA_DECODER" == "satdump" ]; then
-  finish_processing="--finish_processing"
-else
-  finish_processing=""
-fi
-
 FLIP=""
 log "Direction $PASS_DIRECTION" "INFO"
 if [ "$PASS_DIRECTION" == "Northbound" ]; then
@@ -172,7 +166,7 @@ fi
 
 # pass start timestamp and sun elevation
 PASS_START=$(expr "$EPOCH_START" + 90)
-export SUN_ELEV=$(python3 "$SCRIPTS_DIR"/tools/sun.py "$PASS_START")
+export SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$PASS_START")
 
 # run all enhancements all the time - any that cannot be produced will
 # simply be left out/not included, so there is no harm in running all of them
@@ -181,8 +175,8 @@ daylight=$((SUN_ELEV > SUN_MIN_ELEV ? 1 : 0))
 #start capture
 log "Recording ${NOAA_HOME} via ${RECEIVER_TYPE} at ${freq} MHz via SatDump live pipeline" "INFO"
 audio_temporary_storage_directory="$(dirname "${RAMFS_FILE_BASE}")"
-log "$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav $finish_processing --timeout $CAPTURE_TIME" "INFO"
-$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav $finish_processing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
+log "$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav --finish_processing --timeout $CAPTURE_TIME" "INFO"
+$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav --finish_processing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
 rm "$audio_temporary_storage_directory/dataset.json" "$audio_temporary_storage_directory/product.cbor" >> $NOAA_LOG 2>&1
 log "Files recorded" "INFO"
 
@@ -199,182 +193,71 @@ if [ "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES}" == "true" ]; then
   curl -F "file=@${RAMFS_AUDIO_BASE}.wav" "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES_URL}/noaa" >> $NOAA_LOG 2>&1
 fi
 
-if [ "$NOAA_DECODER" == "wxtoimg" ]; then
-  log "Resampling down audio" "INFO"
-  $SOX "$audio_temporary_storage_directory/noaa_apt.wav" -r 11025 "${RAMFS_AUDIO_BASE}.wav" pad 0 $WXTOIMG_MAP_OFFSET >> $NOAA_LOG 2>&1
-  rm "$audio_temporary_storage_directory/noaa_apt.wav" >> $NOAA_LOG 2>&1
+log "Resampling down audio" "INFO"
+$SOX "$audio_temporary_storage_directory/noaa_apt.wav" -r 11025 "${RAMFS_AUDIO_BASE}.wav" >> $NOAA_LOG 2>&1
+rm "$audio_temporary_storage_directory/noaa_apt.wav" >> $NOAA_LOG 2>&1
 
-  push_file_list=""
-  #generate outputs
-  spectrogram=0
-  if [[ "${PRODUCE_SPECTROGRAM}" == "true" ]]; then
-    log "Producing spectrogram" "INFO"
-    spectrogram=1
-    spectro_text="${capture_start} @ ${SAT_MAX_ELEVATION}°"
-    ${IMAGE_PROC_DIR}/spectrogram.sh "${RAMFS_AUDIO_BASE}.wav" "${IMAGE_FILE_BASE}-spectrogram.png" "${SAT_NAME}" "${spectro_text}" >> $NOAA_LOG 2>&1
-    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-spectrogram.png" "${IMAGE_THUMB_BASE}-spectrogram.png" >> $NOAA_LOG 2>&1
-  fi
+# spectrogram/pristine/histogram were products of the retired wxtoimg decoder
+# and are no longer produced - their database columns remain so the webpanel
+# can still display them for older captures
+push_file_list=""
+spectrogram=0
+pristine=0
+histogram=0
 
-  pristine=0
-  if [[ "${PRODUCE_NOAA_PRISTINE}" == "true" ]]; then
-    log "Producing pristine image" "INFO"
-    pristine=1
-    ${IMAGE_PROC_DIR}/noaa_pristine.sh "${RAMFS_AUDIO_BASE}.wav" "${IMAGE_FILE_BASE}-pristine.png" 2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG
-    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-pristine.png" "${IMAGE_THUMB_BASE}-pristine.png" >> $NOAA_LOG 2>&1
-    push_file_list="${push_file_list} ${IMAGE_FILE_BASE}-pristine.png"
-  fi
-
-  histogram=0
-  if [ "${PRODUCE_NOAA_PRISTINE_HISTOGRAM}" == "true" ]; then
-    tmp_dir="${NOAA_HOME}/tmp"
-    histogram=1
-    histogram_text="${capture_start} @ ${SAT_MAX_ELEVATION}° Gain: ${GAIN}"
-
-    log "Generating Data for Histogram" "INFO"
-    ${IMAGE_PROC_DIR}/noaa_histogram_data.sh "${RAMFS_AUDIO_BASE}.wav" "${tmp_dir}/${FILENAME_BASE}-a.png" "${tmp_dir}/${FILENAME_BASE}-b.png"  2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG
-
-    # Define channel names
-    channels=("a" "b")
-
-    # Loop through channels
-    for channel in "${channels[@]}"; do
-      log "Producing histogram of NOAA pristine image channel $channel" "INFO"
-      ${IMAGE_PROC_DIR}/histogram.sh "${tmp_dir}/${FILENAME_BASE}-${channel}.png" "${IMAGE_FILE_BASE}-histogram-${channel}.jpg" "${SAT_NAME} - Channel $channel" "${histogram_text}" >> $NOAA_LOG 2>&1
-      ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-histogram-${channel}.jpg" "${IMAGE_THUMB_BASE}-histogram-${channel}.jpg" >> $NOAA_LOG 2>&1
-    done
-
-    log "Horizontally Merge two Histogram Channels to a single image for output"
-    $CONVERT +append "${IMAGE_FILE_BASE}-histogram-a.jpg" "${IMAGE_FILE_BASE}-histogram-b.jpg" -resize x500 "${IMAGE_FILE_BASE}-histogram.jpg" >>$NOAA_LOG 2>&1
-    $CONVERT +append "${IMAGE_THUMB_BASE}-histogram-a.jpg" "${IMAGE_THUMB_BASE}-histogram-b.jpg" -resize x300 "${IMAGE_THUMB_BASE}-histogram.jpg" >>$NOAA_LOG 2>&1
-
-    # Remove temporary files
-    for channel in "${channels[@]}"; do
-      rm "${IMAGE_FILE_BASE}-histogram-${channel}.jpg" "${IMAGE_THUMB_BASE}-histogram-${channel}.jpg" "${tmp_dir}/${FILENAME_BASE}-${channel}.png"
-    done
-  fi
-
-  log "Bulding pass map" "INFO"
-  # add 10 seconds to ensure we account for small deviations in timing - being even a second too soon
-  # can cause an error of "wxmap: warning: could not find matching pass to build overlay map.", while
-  # going over the start time by a few seconds while still being within the pass timing causes wxmap
-  # to track *back* to the start of the pass
-  epoch_adjusted=$(($PASS_START + 10))
-
-  extra_map_opts=""
-  [[ "${NOAA_MAP_CROSSHAIR_ENABLE}" == "true" ]] && extra_map_opts+=" -l 1 -c l:${NOAA_MAP_CROSSHAIR_COLOR}" || extra_map_opts+=" -l 0"
-  [[ "${NOAA_MAP_GRID_DEGREES}" != "0.0" ]] && extra_map_opts+=" -g ${NOAA_MAP_GRID_DEGREES} -c g:${NOAA_MAP_GRID_COLOR}" || extra_map_opts+=" -g 0.0"
-  [[ "${NOAA_MAP_COUNTRY_BORDER_ENABLE}" == "true" ]] && extra_map_opts+=" -C 1 -c C:${NOAA_MAP_COUNTRY_BORDER_COLOR}" || extra_map_opts+=" -C 0"
-  [[ "${NOAA_MAP_STATE_BORDER_ENABLE}" == "true" ]] && extra_map_opts+=" -S 1 -c S:${NOAA_MAP_STATE_BORDER_COLOR}" || extra_map_opts+=" -S 0"
-
-  map_overlay="${NOAA_HOME}/tmp/map/${FILENAME_BASE}-map.png"
-  $WXMAP -T "${SAT_NAME}" -H "${TLE_FILE}" -p 0 ${extra_map_opts} -o "${epoch_adjusted}" "$map_overlay" 2>&1 | grep -Ev "invalid pointer|Aborted" >> "$NOAA_LOG"
-
-  if [ "$daylight" -eq 1 ]; then
-    ENHANCEMENTS="${NOAA_DAY_ENHANCEMENTS}"
-  else
-    ENHANCEMENTS="${NOAA_NIGHT_ENHANCEMENTS}"
-  fi
-
-  # build images based on enhancements defined
-  log "Normalizing NOAA images" "INFO"
-  for enhancement in $ENHANCEMENTS; do
-    export ENHANCEMENT=$enhancement
-    log "Decoding image" "INFO"
-
-    if [ $enhancement == "enhanced-IR" ]; then
-      continue
-    elif [ $enhancement == "avi" ]; then
-      ${IMAGE_PROC_DIR}/noaa_avi.sh $map_overlay "${RAMFS_AUDIO_BASE}.wav" 2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG
-    else
-      ${IMAGE_PROC_DIR}/noaa_enhancements.sh $map_overlay "${RAMFS_AUDIO_BASE}.wav" "${IMAGE_FILE_BASE}-$enhancement.jpg" $enhancement 2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG 
-    fi
-
-    if [ -f "${IMAGE_FILE_BASE}-$enhancement.jpg" ]; then
-      ${IMAGE_PROC_DIR}/noaa_normalize.sh "${IMAGE_FILE_BASE}-$enhancement.jpg" "${IMAGE_FILE_BASE}-$enhancement.jpg" $NOAA_IMAGE_QUALITY 2>&1 | grep -Ev "invalid pointer|Aborted" >> $NOAA_LOG
-      ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-$enhancement.jpg" "${IMAGE_THUMB_BASE}-$enhancement.jpg" >> $NOAA_LOG 2>&1
-      push_file_list="${push_file_list} ${IMAGE_FILE_BASE}-$enhancement.jpg"
-    fi
+if [ -n "$(find . -maxdepth 1 -type f -name '*.png')" ]; then
+  log "Removing images without a map if they exist" "INFO"
+  for file in *map.png; do
+    mv "$file" "${file/_map.png/.png}"
   done
 
-  rm $map_overlay >> $NOAA_LOG 2>&1
+  log "Flipping projected images once here and renaming them so they will be flipped again later in the for loop restoring their original orientation" "INFO"
+  for projected_file in rgb_*.png; do
+    $CONVERT $projected_file $FLIP $projected_file
+  done
 
-  if [ "$DELETE_NOAA_AUDIO" == true ]; then
-    log "Deleting audio files" "INFO"
-    rm "${RAMFS_AUDIO_BASE}.wav"
-  else
-    if [ "$in_mem" == "true" ]; then
-      log "Moving audio files out to the SD card" "INFO"
-      mv "${RAMFS_AUDIO_BASE}.wav" "${AUDIO_FILE_BASE}.wav"
-      log "Deleting NOAA audio files older than $DELETE_FILES_OLDER_THAN_DAYS days" "INFO"
-      find /srv/audio/noaa -type f -name "*.wav" -mtime +${DELETE_FILES_OLDER_THAN_DAYS} -delete >> $NOAA_LOG 2>&1
-    fi
-  fi
-elif [ "$NOAA_DECODER" == "satdump" ]; then
-  log "Resampling down audio" "INFO"
-  $SOX "$audio_temporary_storage_directory/noaa_apt.wav" -r 11025 "${RAMFS_AUDIO_BASE}.wav" >> $NOAA_LOG 2>&1
-  rm "$audio_temporary_storage_directory/noaa_apt.wav" >> $NOAA_LOG 2>&1
+  log "Normalizing NOAA images" "INFO"
+  for i in *.png; do
+    $CONVERT "$i" $FLIP "$i"
 
-  spectrogram=0
-  pristine=0
-  histogram=0
+    new_file="${i//_\(Uncalibrated\)}"
 
-  if [ -n "$(find . -maxdepth 1 -type f -name '*.png')" ]; then
-    log "Removing images without a map if they exist" "INFO"
-    for file in *map.png; do
-      mv "$file" "${file/_map.png/.png}"
-    done
-
-    log "Flipping projected images once here and renaming them so they will be flipped again later in the for loop restoring their original orientation" "INFO"
-    for projected_file in rgb_*.png; do
-      $CONVERT $projected_file $FLIP $projected_file
-    done
-
-    log "Normalizing NOAA images" "INFO"
-    for i in *.png; do
-      $CONVERT "$i" $FLIP "$i"
-
-      new_file="${i//_\(Uncalibrated\)}"
-
-      #This if statement should execute only if the $i variable contains the substring _(Uncalibrated), otherwise it doesn't have any point
-      if [[ "$i" =~ _\(Uncalibrated\) ]]; then
-        if [ ! -f "$new_file" ]; then
-          log "Keep using calibrated versions of MCIR and MSA images" "INFO"
-          mv "$i" "$new_file"
-        else
-          log "Delete uncalibrated MCIR and MSA images if calibrated versions exist" "INFO"
-          rm "$i"
-          continue
-        fi
+    #This if statement should execute only if the $i variable contains the substring _(Uncalibrated), otherwise it doesn't have any point
+    if [[ "$i" =~ _\(Uncalibrated\) ]]; then
+      if [ ! -f "$new_file" ]; then
+        log "Keep using calibrated versions of MCIR and MSA images" "INFO"
+        mv "$i" "$new_file"
+      else
+        log "Delete uncalibrated MCIR and MSA images if calibrated versions exist" "INFO"
+        rm "$i"
+        continue
       fi
-
-      new_name="${new_file//rgb_avhrr_3_rgb_}"
-      new_name="${new_name//avhrr_apt_rgb_}"
-      new_name="${new_name//avhrr_3_rgb_}"
-      new_name="${new_name//avhrr_apt_}"
-      new_name="${new_name//_enhancement}"
-      new_name="${new_name//_\(channel_1\)}"
-      new_name="${new_name//_\(channel_4\)}"
-      ${IMAGE_PROC_DIR}/noaa_normalize.sh "$new_file" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $NOAA_IMAGE_QUALITY >> $NOAA_LOG 2>&1
-      ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" "${IMAGE_THUMB_BASE}-${new_name%.png}.jpg" >> $NOAA_LOG 2>&1
-      push_file_list="${push_file_list} ${IMAGE_FILE_BASE}-${new_name%.png}.jpg"
-      rm $new_file >> $NOAA_LOG 2>&1
-    done
-  fi
-
-  if [ "$DELETE_NOAA_AUDIO" == true ]; then
-    log "Deleting audio files" "INFO"
-    rm "${RAMFS_AUDIO_BASE}.wav"
-  else
-    if [ "$in_mem" == "true" ]; then
-      log "Moving audio files out to the SD card" "INFO"
-      mv "${RAMFS_AUDIO_BASE}.wav" "${AUDIO_FILE_BASE}.wav"
-      log "Deleting NOAA audio files older than $DELETE_FILES_OLDER_THAN_DAYS days" "INFO"
-      find /srv/audio/noaa -type f -name "*.wav" -mtime +${DELETE_FILES_OLDER_THAN_DAYS} -delete >> $NOAA_LOG 2>&1
     fi
-  fi
+
+    new_name="${new_file//rgb_avhrr_3_rgb_}"
+    new_name="${new_name//avhrr_apt_rgb_}"
+    new_name="${new_name//avhrr_3_rgb_}"
+    new_name="${new_name//avhrr_apt_}"
+    new_name="${new_name//_enhancement}"
+    new_name="${new_name//_\(channel_1\)}"
+    new_name="${new_name//_\(channel_4\)}"
+    ${IMAGE_PROC_DIR}/noaa_normalize.sh "$new_file" "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" $NOAA_IMAGE_QUALITY >> $NOAA_LOG 2>&1
+    ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-${new_name%.png}.jpg" "${IMAGE_THUMB_BASE}-${new_name%.png}.jpg" >> $NOAA_LOG 2>&1
+    push_file_list="${push_file_list} ${IMAGE_FILE_BASE}-${new_name%.png}.jpg"
+    rm $new_file >> $NOAA_LOG 2>&1
+  done
+fi
+
+if [ "$DELETE_NOAA_AUDIO" == true ]; then
+  log "Deleting audio files" "INFO"
+  rm "${RAMFS_AUDIO_BASE}.wav"
 else
-  log "Invalid NOAA_DECODER value: $NOAA_DECODER" "INFO"
-  exit 1
+  if [ "$in_mem" == "true" ]; then
+    log "Moving audio files out to the SD card" "INFO"
+    mv "${RAMFS_AUDIO_BASE}.wav" "${AUDIO_FILE_BASE}.wav"
+    log "Deleting NOAA audio files older than $DELETE_FILES_OLDER_THAN_DAYS days" "INFO"
+    find /srv/audio/noaa -type f -name "*.wav" -mtime +${DELETE_FILES_OLDER_THAN_DAYS} -delete >> $NOAA_LOG 2>&1
+  fi
 fi
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -386,7 +269,7 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
     log "Producing polar graph of azimuth and elevation for pass" "INFO"
     polar_az_el=1
     epoch_end=$((EPOCH_START + CAPTURE_TIME))
-    python3 ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
+    "$PYTHON" ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
                                             "${TLE_FILE}" \
                                             $EPOCH_START \
                                             $epoch_end \
@@ -404,7 +287,7 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
     log "Producing polar graph of direction for pass" "INFO"
     polar_direction=1
     epoch_end=$((EPOCH_START + CAPTURE_TIME))
-    python3 ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
+    "$PYTHON" ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
                                             "${TLE_FILE}" \
                                             $EPOCH_START \
                                             $epoch_end \
@@ -488,19 +371,19 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   # handle Bluesky pushing if enabled
   if [ "${ENABLE_BLUESKY_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Bluesky" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_bluesky.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_bluesky.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
   fi
 
   # handle Mastodon pushing if enabled
   if [ "${ENABLE_MASTODON_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Mastodon" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_mastodon.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_mastodon.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
   fi
 
   # handle Facebook pushing if enabled
   if [ "${ENABLE_FACEBOOK_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Facebook" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_facebook.py "${push_annotation}" "${push_file_list}" >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_facebook.py "${push_annotation}" "${push_file_list}" >> $NOAA_LOG 2>&1
   fi
 
   # handle Instagram pushing if enabled
@@ -511,7 +394,7 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
       $CONVERT +append "${IMAGE_FILE_BASE}-MCIR.jpg" "${IMAGE_FILE_BASE}-MCIR-precip.jpg" "${IMAGE_FILE_BASE}-instagram.jpg"
     fi
     log "Pushing image enhancements to Instagram" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_instagram.py "${push_annotation}" $(sed 's|/srv/images/||' <<< "${IMAGE_FILE_BASE}-instagram.jpg") ${WEB_SERVER_NAME} >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_instagram.py "${push_annotation}" $(sed 's|/srv/images/||' <<< "${IMAGE_FILE_BASE}-instagram.jpg") ${WEB_SERVER_NAME} >> $NOAA_LOG 2>&1
     rm "${IMAGE_FILE_BASE}-instagram.jpg"
   fi
 

@@ -1,8 +1,9 @@
 #!/bin/bash
 #
-# Purpose: The purpose of this uninstall script is to remove the RN2 environment 
-#          and key packages like satdump, meteordemod, , predict, wxtoimg, and nginx. As well
-#          as removal of RN2 crontab entries and Audio, Videos and Images in /srv
+# Purpose: The purpose of this uninstall script is to remove the RN2 environment
+#          and key packages like satdump, meteordemod, and nginx (plus the legacy
+#          predict/wxtoimg packages from older installs). As well as removal of
+#          RN2 crontab entries and Audio, Videos and Images in /srv
 #
 # Author:  Richard Creasey (AI4Y)
 #
@@ -16,7 +17,7 @@ PACKAGES_BOOKWORM="satdump wxtoimg nginx predict php8.2-intl php8.2-sqlite3 php8
 # On Trixie satdump is built from source (no apt package) - its installed files
 # are removed via PATHS below instead
 PACKAGES_TRIXIE="wxtoimg nginx predict php8.4-intl php8.4-sqlite3 php8.4-mbstring php8.4-fpm"
-PATHS="/srv/audio /srv/videos /srv/images $HOME/.config/composer $HOME/.config/gmic $HOME/.config/matplotlib $HOME/.config/meteordemod $HOME/.config/composer $HOME/.config/satdump $HOME/raspberry-noaa-v2 $HOME/.predict $HOME/.noaa-v2.conf $HOME/.wxtoimglic $HOME/.wxtoimgrc /usr/local/bin/rtl_* /var/log/raspberry-noaa-v2 /etc/sudoers.d/020_www-data-atrm-nopasswd /var/www/wx-new /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default /tmp/rtl-sdr /etc/modprobe.d/rtlsdr.conf"
+PATHS="/srv/audio /srv/videos /srv/images $HOME/.config/composer $HOME/.config/gmic $HOME/.config/matplotlib $HOME/.config/meteordemod $HOME/.config/composer $HOME/.config/satdump $HOME/raspberry-noaa-v2 $HOME/.predict $HOME/.rn2_venv $HOME/.noaa-v2.conf $HOME/.wxtoimglic $HOME/.wxtoimgrc /usr/local/bin/rtl_* /var/log/raspberry-noaa-v2 /etc/sudoers.d/020_www-data-atrm-nopasswd /var/www/wx-new /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default /tmp/rtl-sdr /etc/modprobe.d/rtlsdr.conf"
 SERVICES="phpsessionclean.service phpsessionclean.timer nginx.service"
 OS=$(cat /etc/os-release | grep -E "^DEBIAN_CODENAME|^VERSION_CODENAME" | awk -F"=" '{print $NF}' | sort | head -1)
 

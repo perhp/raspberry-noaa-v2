@@ -56,17 +56,14 @@
 
 #Twitter
 
-- name: install tweepy if Twitter push is enabled (bookworm)
-  command: pip3 install tweepy --break-system-packages
-  when: enable_twitter_push | bool and raspbian_version.stdout == 'bookworm'
-
-- name: install tweepy if Twitter push is enabled (bullseye)
+- name: install tweepy into the RN2 virtualenv if Twitter push is enabled
   pip:
     name:
       - tweepy
     state: present
-    executable: pip3
-  when: enable_twitter_push | bool and raspbian_version.stdout == 'bullseye'
+    virtualenv: /home/{{ target_user }}/.rn2_venv
+    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
+  when: enable_twitter_push | bool
 
 - name: drop template Twitter config file
   copy:
@@ -82,17 +79,14 @@
 
 #Facebook
 
-- name: install facebook-sdk if Facebook push is enabled (bookworm)
-  command: pip3 install facebook-sdk --break-system-packages
-  when: enable_facebook_push | bool and raspbian_version.stdout == 'bookworm'
-
-- name: install facebook-sdk if Facebook push is enabled (bullseye)
+- name: install facebook-sdk into the RN2 virtualenv if Facebook push is enabled
   pip:
     name:
       - facebook-sdk
     state: present
-    executable: pip3
-  when: enable_facebook_push | bool and raspbian_version.stdout == 'bullseye'
+    virtualenv: /home/{{ target_user }}/.rn2_venv
+    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
+  when: enable_facebook_push | bool
 
 - name: drop template Facebook config file
   copy:
@@ -108,17 +102,14 @@
 
 #Instagram
 
-- name: install facebook-sdk if Instagram push is enabled (bookworm)
-  command: pip3 install facebook-sdk --break-system-packages
-  when: enable_instagram_push | bool and raspbian_version.stdout == 'bookworm'
-
-- name: install facebook-sdk if Instagram push is enabled (bullseye)
+- name: install facebook-sdk into the RN2 virtualenv if Instagram push is enabled
   pip:
     name:
       - facebook-sdk
     state: present
-    executable: pip3
-  when: enable_instagram_push | bool and raspbian_version.stdout == 'bullseye'
+    virtualenv: /home/{{ target_user }}/.rn2_venv
+    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
+  when: enable_instagram_push | bool
 
 - name: drop template Instagram config file
   copy:
@@ -134,17 +125,14 @@
 
 #Mastodon
 
-- name: install Mastodon.py if Mastodon push is enabled (bookworm)
-  command: pip3 install Mastodon.py --break-system-packages
-  when: enable_mastodon_push | bool and raspbian_version.stdout == 'bookworm'
-
-- name: install Mastodon.py if Mastodon push is enabled (bullseye)
+- name: install Mastodon.py into the RN2 virtualenv if Mastodon push is enabled
   pip:
     name:
       - Mastodon.py
     state: present
-    executable: pip3
-  when: enable_mastodon_push | bool and raspbian_version.stdout == 'bullseye'
+    virtualenv: /home/{{ target_user }}/.rn2_venv
+    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
+  when: enable_mastodon_push | bool
 
 - name: drop template Mastodon config file
   copy:
@@ -160,17 +148,14 @@
 
 #Bluesky
 
-- name: install atproto if Bluesky push is enabled (bookworm)
-  command: pip3 install atproto --break-system-packages
-  when: enable_bluesky_push | bool and raspbian_version.stdout == 'bookworm'
-
-- name: install atproto if Mastodon push is enabled (bullseye)
+- name: install atproto into the RN2 virtualenv if Bluesky push is enabled
   pip:
     name:
       - atproto
     state: present
-    executable: pip3
-  when: enable_bluesky_push | bool and raspbian_version.stdout == 'bullseye'
+    virtualenv: /home/{{ target_user }}/.rn2_venv
+    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
+  when: enable_bluesky_push | bool
 
 - name: drop template Bluesky config file
   copy:

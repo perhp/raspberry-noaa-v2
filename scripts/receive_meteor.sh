@@ -187,7 +187,7 @@ fi
 
 # pass start timestamp and sun elevation
 PASS_START=$((EPOCH_START + 90))
-export SUN_ELEV=$(python3 "$SCRIPTS_DIR"/tools/sun.py "$PASS_START")
+export SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$PASS_START")
 if ! [[ "$SUN_ELEV" =~ ^-?[0-9]+$ ]]; then
   log "Could not determine sun elevation (got '$SUN_ELEV') - defaulting to 0" "ERROR"
   export SUN_ELEV=0
@@ -237,14 +237,6 @@ log "Removing old bmp, gcp, and dat files" "INFO"
 find "$NOAA_HOME/tmp/meteor" -type f \( -name "*.gcp" -o -name "*.bmp" -o -name "*.dat" \) -mtime +1 -delete >> $NOAA_LOG 2>&1
 
 if [[ "$METEOR_DECODER" == "meteordemod" ]]; then
-  # if [[ "${PRODUCE_SPECTROGRAM}" == "true" ]]; then
-  #   log "Producing spectrogram" "INFO"
-  #   spectrogram=1
-  #   spectro_text="${capture_start} @ ${SAT_MAX_ELEVATION}°"
-  #   ${IMAGE_PROC_DIR}/spectrogram.sh "${RAMFS_AUDIO_BASE}.wav" "${IMAGE_FILE_BASE}-spectrogram.png" "${SAT_NAME}" "${spectro_text}" >> $NOAA_LOG 2>&1
-  #   ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-spectrogram.png" "${IMAGE_THUMB_BASE}-spectrogram.png" >> $NOAA_LOG 2>&1
-  # fi
-
   if [ ! -f "${RAMFS_AUDIO_BASE}.cadu" ]; then
     log "No CADU file available - skipping MeteorDemod decode" "ERROR"
   else
@@ -455,7 +447,7 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
     log "Producing polar graph of azimuth and elevation for pass" "INFO"
     polar_az_el=1
     epoch_end=$((EPOCH_START + CAPTURE_TIME))
-    python3 ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
+    "$PYTHON" ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
                                             "${TLE_FILE}" \
                                             $EPOCH_START \
                                             $epoch_end \
@@ -473,7 +465,7 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
     log "Producing polar graph of direction for pass" "INFO"
     polar_direction=1
     epoch_end=$((EPOCH_START + CAPTURE_TIME))
-    python3 ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
+    "$PYTHON" ${IMAGE_PROC_DIR}/polar_plot.py "${SAT_NAME}" \
                                             "${TLE_FILE}" \
                                             $EPOCH_START \
                                             $epoch_end \
@@ -540,19 +532,19 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
   # handle Facebook pushing if enabled
   if [ "${ENABLE_FACEBOOK_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Facebook" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_facebook.py "${push_annotation}" "${push_file_list}" >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_facebook.py "${push_annotation}" "${push_file_list}" >> $NOAA_LOG 2>&1
   fi
 
   # handle Mastodon pushing if enabled
   if [ "${ENABLE_MASTODON_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Mastodon" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_mastodon.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_mastodon.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
   fi
 
   # handle Bluesky pushing if enabled
   if [ "${ENABLE_BLUESKY_PUSH}" == "true" ]; then
     log "Pushing image enhancements to Bluesky" "INFO"
-    python3 ${PUSH_PROC_DIR}/push_bluesky.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
+    "$PYTHON" ${PUSH_PROC_DIR}/push_bluesky.py "${push_annotation}" ${push_file_list} >> $NOAA_LOG 2>&1
   fi
 
   # handle Instagram pushing if enabled
@@ -560,7 +552,7 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
     if [ -n "$website_suffix" ] && [ -f "${IMAGE_FILE_BASE}${website_suffix}" ]; then
       log "Pushing image enhancements to Instagram" "INFO"
       $CONVERT "${IMAGE_FILE_BASE}${website_suffix}" -resize "1080x1350>" -gravity center -background black -extent 1080x1350 "${IMAGE_FILE_BASE}-instagram.jpg" >> $NOAA_LOG 2>&1
-      python3 ${PUSH_PROC_DIR}/push_instagram.py "${push_annotation}" $(sed "s|${IMAGE_OUTPUT}/||" <<< "${IMAGE_FILE_BASE}-instagram.jpg") ${WEB_SERVER_NAME} >> $NOAA_LOG 2>&1
+      "$PYTHON" ${PUSH_PROC_DIR}/push_instagram.py "${push_annotation}" $(sed "s|${IMAGE_OUTPUT}/||" <<< "${IMAGE_FILE_BASE}-instagram.jpg") ${WEB_SERVER_NAME} >> $NOAA_LOG 2>&1
       rm -f "${IMAGE_FILE_BASE}-instagram.jpg"
     else
       log "Skipping Instagram push - no suitable source image found" "INFO"

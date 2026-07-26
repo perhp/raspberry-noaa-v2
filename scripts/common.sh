@@ -35,14 +35,17 @@ FFMPEG="/usr/bin/ffmpeg"
 SOX="/usr/bin/sox"
 GMIC="/usr/bin/gmic"
 IDENTIFY="/usr/bin/identify"
-PREDICT="/usr/bin/predict"
 RTL_FM="/usr/local/bin/rtl_fm"
 SQLITE3="/usr/bin/sqlite3"
-WXMAP="/usr/local/bin/wxmap"
-WXTOIMG="/usr/local/bin/wxtoimg"
 WKHTMLTOIMG="/usr/bin/wkhtmltoimage"
 METEORDEMOD="/usr/local/bin/meteordemod"
 SATDUMP="/usr/bin/satdump"
+
+# Python interpreter - ~/.noaa-v2.conf points this at the RN2 virtualenv,
+# which contains the pip-only packages (envbash, facebook-sdk) on top of the
+# system site-packages; fall back to the system interpreter on installs that
+# predate the virtualenv
+PYTHON="${PYTHON:-/usr/bin/python3}"
 
 # record capture lifecycle status ('capturing', 'processing', 'received',
 # 'failed') on the scheduled pass row so the webpanel can show real state

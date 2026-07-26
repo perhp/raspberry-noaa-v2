@@ -30,6 +30,7 @@
       - libxft-dev
       - libxft2
       - python3-setuptools
+      - python3-venv
       - python3-idna
       - python3-jsonschema
       - python3-matplotlib
@@ -85,38 +86,6 @@
       - libvolk-dev
       - libncurses-dev
   when: raspbian_version.stdout == 'trixie'
-
-- name: Install required wxtoimg 32-bit dependencies (arm64)
-  become: yes
-  apt:
-    update_cache: yes
-    state: present
-    name:
-      - libc6:armhf
-      - libstdc++6:armhf
-      - libx11-6:armhf
-      - libxft-dev:armhf
-      - libxft2:armhf
-  when: system_architecture == 'arm64'
-
-# ALSA runtime library was renamed in the Trixie time64 transition
-- name: Install wxtoimg 32-bit ALSA dependency (arm64, up to bookworm)
-  become: yes
-  apt:
-    update_cache: no
-    state: present
-    name:
-      - libasound2:armhf
-  when: system_architecture == 'arm64' and raspbian_version.stdout != 'trixie'
-
-- name: Install wxtoimg 32-bit ALSA dependency (arm64, trixie)
-  become: yes
-  apt:
-    update_cache: no
-    state: present
-    name:
-      - libasound2t64:armhf
-  when: system_architecture == 'arm64' and raspbian_version.stdout == 'trixie'
 
 #This was included because, for a period of time, SatDump didn't have dependencies included in the .deb file
 
@@ -206,47 +175,22 @@
 #    state: present
 #    executable: pip3
 
-# pysqlite3 was dropped from this list: nothing in the repo imports it (the
-# Python scripts use the stdlib sqlite3 module) and 0.5.1 no longer compiles
-# against Python 3.13 on Trixie
-- name: Install required Python packages using pip3 since they aren't available among the apt packages
-  command: pip3 install envbash==1.2.0 facebook-sdk==3.1.0 --break-system-packages
-  when: raspbian_version.stdout in ['bookworm', 'trixie']
-
-- name: Install required Python packages using pip3
+# The RN2 virtualenv is created with system site-packages so the apt-installed
+# Python modules (numpy, matplotlib, ephem, ...) remain importable; only the
+# packages unavailable via apt are pip-installed into it. Runtime scripts use
+# it through the PYTHON variable rendered into ~/.noaa-v2.conf.
+# (pysqlite3 was dropped from this list: nothing in the repo imports it - the
+# Python scripts use the stdlib sqlite3 module - and 0.5.1 no longer compiles
+# against Python 3.13 on Trixie)
+- name: Install pip-only Python packages into the RN2 virtualenv
   pip:
     name:
       - envbash==1.2.0
       - facebook-sdk==3.1.0
-      - pysqlite3==0.5.1
     state: present
-    executable: pip3
-  when: raspbian_version.stdout == 'bullseye'
+    virtualenv: /home/{{ target_user }}/.rn2_venv
+    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
 
-- name: Installing predict on PCs (amd64)
-  become: yes
-  apt:
-    deb: "{{ noaa_home }}/software/predict_2.2.3-4-b2_amd64.deb"
-    state: present
-    update_cache: no
-  when: system_architecture == 'amd64'
-
-- name: Installing predict on Raspberry Pi (armhf)
-  become: yes
-  apt:
-    deb: "{{ noaa_home }}/software/predict_2.2.5+dfsg.1-1_armhf.deb"
-    state: present
-    update_cache: no
-  when: system_architecture == 'armhf'
-  
-- name: Installing predict on Raspberry Pi (arm64)
-  become: yes
-  apt:
-    deb: "{{ noaa_home }}/software/predict_2.2.5+dfsg.1-1_arm64.deb"
-    state: present
-    update_cache: no
-  when: system_architecture == 'arm64'
-  
 # SatDump .deb packages are only provided for 64-bit Bookworm (arm64/amd64).
 # Upstream ships no Trixie package, so on Trixie SatDump is built from source
 # against the distro's volk 3.x / nng 1.10 below.
@@ -331,20 +275,6 @@
     chdir: /tmp/satdump/build
     creates: /usr/bin/satdump
   when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
-
-- name: Create WXtoImg symbolic link for ARM64 architecture
-  file:
-    src: "/home/{{ target_user }}/raspberry-noaa-v2/software/wxtoimg-armhf-2.11.2-beta.deb"
-    dest: "/home/{{ target_user }}/raspberry-noaa-v2/software/wxtoimg-arm64-2.11.2-beta.deb"
-    state: link
-  when: system_architecture == 'arm64'
-
-- name: Installing WXtoImg
-  become: yes
-  apt:
-    deb: "{{ noaa_home }}/software/wxtoimg-{{ system_architecture }}-2.11.2-beta.deb"
-    state: present
-    update_cache: no
 
 #- name: Installing MeteorDemod
 #  become: yes

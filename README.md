@@ -105,13 +105,6 @@ If you test with another OS - again, please submit a PR and let us know how it w
 If you're interested in the details behind the original raspberry-noaa hardware compatibility tests, see the [hardware](docs/hardware.md)
 document.
 
-## wxtoimg License Terms Acceptance
-
-Use of this framework assumes acceptance of the wxtoimg license terms and will automatically "accept" the terms as part of the installation.
-You MUST review the license prior to installing this framework, which can be viewed under the "Terms and Conditions" section of the
-[wxtoimg manual](https://wxtoimgrestored.xyz/downloads/wxgui.pdf). If you disagree with the WXtoImg terms, please do not install or
-use this framework.
-
 ## Prerequisites
 
 Below are some prerequisites steps and considerations before installing this software:
@@ -125,8 +118,6 @@ consistent time and language handling.
 4. It's not recommended to use the default user "pi" and the default password "raspberry". While it is not
 recommended that you expose a Pi instance to the public internet for access (unless you have a VERY strict process about security
 patching, and even then it would still be questionable), updating your Pi user password is a decent first step for security.
-5. When you perform the operating system install, please ensure the account name you choose for installing the RN2 software under is 9 characters or less.
-This character limit is due to a known constraint with predict scheduling tool.
 
 ## Install
 
@@ -243,8 +234,6 @@ Execute the verification script by passing the required argument [ quick | full 
 
     nxing web page returned 200 OK status to confirm Web Portal is up.
     satdump live capture for 1 second to ensure it runs without error.
-    wxmap generates an overlay map image which can be found       : $HOME/raspberry-noaa-v2/scripts/tools/verification_tool/test_files/wxtoimg-map-output.png
-    wxtoimg generates MCIR enhanced image which can be founnd     :  $HOME/raspberry-noaa-v2/scripts/tools/verification_tool/test_files/wxtoimg-mcir-output.jpg
     meteordemod -h is executed to ensure it runs without error.
 
    When FULL mode is choosen meterdemod fully decodes a staged cadu file :

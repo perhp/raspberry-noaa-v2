@@ -427,7 +427,7 @@ log "Done scheduling jobs!" "INFO"
 
 if [[ "${SELECT_BEST_OVERLAPPING_PASSES:-false}" == "true" ]]; then
   log "Automatically selecting the best overlapping passes" "INFO"
-  "$NOAA_HOME/scripts/select_best_overlapping_passes.py" \
+  "$PYTHON" "$NOAA_HOME/scripts/select_best_overlapping_passes.py" \
     "$DB_FILE" \
     "$SELECT_METEOR_PASS_OVER_NOAA"
 else

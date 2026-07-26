@@ -18,11 +18,10 @@ ntp_server: ""
 
 # receiver settings
 #   receiver_type - the receiver type which program uses ('rtlsdr', 'airspy_mini', 'airspy_r2', 'airspy_hf_plus_discovery', 'hackrf', 'sdrplay' or 'mirisdr')
-#   noaa_decoder - which receiver method to use (either 'wxtoimg' or 'satdump')
 #   meteor_decoder - which receiver method to use (either 'meteordemod' or 'satdump')
+# note: NOAA captures are always decoded with SatDump (the legacy wxtoimg decoder was retired)
 receiver_type: "rtlsdr"
 
-noaa_decoder: "satdump"
 meteor_decoder: "satdump"
 
 # test settings when running test scripts
@@ -123,76 +122,31 @@ delete_files_older_than_days: 3
 
 # processing settings
 #   flip_meteor_image - whether the meteor image should be flipped
-#   produce_spectrogram - whether to produce a spectrogram image of the audio recording
-#   noaa_crop_telemetry - whether to crop the left/right telemetry in image captures
-#   produce_noaa_pristine_image - whether to produce a pristine image (unmodified) for larger
-#        composite-based use cases
-#   produce_noaa_pristine_histogram - whether to produce a histogram of the NOAA pristine image
 #   produce_polar_az_el_graph - whether to produce a polar graph that shows the pass
 #        azimuth and elevation over the course of the pass, truncated to satellite min elevation
 #   produce_polar_direction_graph - whether to produce a polar graph that shows the pass
 #        direction over the course of the pass, including AOS and LOS
 #   ground_station_location - free-form text for indicating ground station location in
 #        push notifications and the emailed pass-list subject (leave blank to exclude)
-#   noaa_daytime_enhancements - list of enhancements to create images using during daytime captures
-#        (note: default value seen includes list of ALL supported image processors excluding 'avi' which must be explicitly added when opting to 'enable_animation' below )
-#   noaa_nighttime_enhancements - list of enhancements to create images using during nighttime captures
-#        (note: default value seen includes list of ALL supported image processors excluding 'avi' which must be explicitly added when opting to 'enable_animation' below )
+#   noaa_daytime_enhancements - list of enhancements the webpanel looks for on daytime captures
+#   noaa_nighttime_enhancements - list of enhancements the webpanel looks for on nighttime captures
 #   noaa_crop_toptobottom - whether to crop the top and bottom noise out of the noaa capture
-#   noaa_interpolate - whether to interpolate and oversample the images (larger images produced)
+#   noaa_map_country_border_enable - whether SatDump draws country border map overlays on NOAA images
 # settings for thermal map output for NOAA captures
 #   noaa_thermal_temp_overlay - whether to overlay a thermal map for color codes to temperature
 #   noaa_thermal_temp_overlay_location - where to place the thermal map in images - valid options are:
 #        NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast
-
-# noaa map configurations
-# http://usradioguy.com/wp-content/uploads/2020/05/wxtoimgcommand-line.pdf
-#
-# note - colors are in format 0xRRGGBB (only applicable when the
-#        feature is enabled), where:
-#   RR: Red hex value
-#   GG: Green hex value
-#   BB: Blue hex value
-# Colors can alternatively be specified as one of the following:
-#   black, white, gray, light-gray, dark-gray, red, pink dark-red,
-#   light-red, # green, light-green, dark-green, black-green, blue,
-#   light-blue, dark-blue, black-blue, yellow, light-yellow, dark-yellow,
-#   magenta, light-magenta, dark-magenta, cyan, light-cyan, dark-cyan,
-#   orange, dark-orange, purple, lavender, violet, navy, turquoise,
-#   aquamarine, chartreuse, gold, beige, tan, brown, and maroon
-#
-#   noaa_map_crosshair_enable - whether to place a crosshairs on the base station location
-#   noaa_map_crosshair_color - color of base station crosshair
-#   noaa_map_grid_degrees - latitude/longitude lines drawn every grid degrees (default 10.0, 0.0 to disable)
-#   noaa_map_grid_color - color of gridlines for latitude/longitude
-#   noaa_map_country_border_enable - whether to enable country borders in images
-#   noaa_map_country_border_color - color of country borders
-#   noaa_map_state_border_enable - whether to enable state borders in images (Americas only)
-#   noaa_map_state_border_color - color of state borders (Americas only)
 produce_polar_az_el_graph: true
 produce_polar_direction_graph: true
 ground_station_location: ""
-produce_spectrogram: false #NOTE: the spectrogram option here is available for NOAA only, and the spectrogrma produced is from demodulated audio, not IQ baseband file
 
-noaa_crop_telemetry: false
-produce_noaa_pristine_image: false
-produce_noaa_pristine_histogram: false
 noaa_daytime_enhancements: "MSA MSA-precip MCIR MCIR-precip HVC-precip HVCT-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO histeq enhanced-IR"
 noaa_nighttime_enhancements: "MCIR MCIR-precip HVCT ZA therm NO TA sea histeq enhanced-IR"
 noaa_crop_toptobottom: false
-noaa_interpolate: false
+noaa_map_country_border_enable: true
 noaa_jpg_image_quality: 90
 noaa_thermal_temp_overlay: true
 noaa_thermal_temp_overlay_location: "NorthEast"
-noaa_map_crosshair_enable: true
-noaa_map_crosshair_color: "0xcc3030"
-noaa_map_grid_degrees: 10.0
-noaa_map_grid_color: "0xff0000"
-noaa_map_country_border_enable: true
-noaa_map_country_border_color: "0xffff00"
-noaa_map_state_border_enable: true
-noaa_map_state_border_color: "0xffff00"
-wxtoimg_map_offset: 10.5 #Change this value only if you see map offsets from the ground on WXtoImg NOAA images
 
 # meteor enhancement tokens used by the SatDump decoder (in addition to the meteordemod ones):
 #   39um - 3.9um shortwave IR images (uncalibrated + temperature-calibrated), new with SatDump 1.2.2
