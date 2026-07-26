@@ -17,6 +17,11 @@ requires `meteor_create_equidistant_projection: true` and at least two matching 
 selected with `daily_timelapse_suffix` (e.g. `-321_equirect_projected.jpg` for daytime visible, `-MCIR_equirect_projected.jpg`
 for an all-hours option).
 
+The most recent timelapse is also shown on the webpanel **Stats** page (the GIFs live at `/srv/images/timelapse-YYYYMMDD.gif`,
+so any of them can be opened directly as `/images/timelapse-YYYYMMDD.gif`). Old timelapses are cleaned up by the age-based
+pruning script (`prune_older_than.sh`, the `delete_older_than_n` setting) along with old capture images - see
+[pruning](pruning.md).
+
 ## Configuration
 
 ```yaml

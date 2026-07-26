@@ -52,6 +52,7 @@ return array(
   "avg_elev" => "Avg Elevation",
   "best_snr" => "Best SNR",
   "last_capture" => "Last Capture",
+  "latest_timelapse" => "Latest Timelapse",
   "no_captures_yet" => "No captures yet.",
   "sky_quality_map" => "Reception Quality Sky Map",
   "sky_quality_map_help" => "Each point is the maximum-elevation position of a past pass, colored by the peak SNR SatDump reported. Clusters of weak or failed passes show where your horizon is obstructed.",

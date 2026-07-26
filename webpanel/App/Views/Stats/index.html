@@ -79,6 +79,19 @@
     </table>
   </div>
 
+  {% if timelapse_file != '' %}
+    <div class="panel-label">
+      <h2>{{ lang.latest_timelapse|default('Latest Timelapse') }}</h2>
+      <span class="rule"></span>
+      <span class="label-aux">{{ timelapse_file }}</span>
+    </div>
+    <div class="instrument">
+      <div class="instrument-body">
+        <img src="/images/{{ timelapse_file }}" alt="{{ lang.latest_timelapse|default('Latest Timelapse') }}" loading="lazy" style="max-width: 100%; height: auto;">
+      </div>
+    </div>
+  {% endif %}
+
   <div class="panel-label">
     <h2>{{ lang.sky_quality_map|default('Reception Quality Sky Map') }}</h2>
     <span class="rule"></span>
