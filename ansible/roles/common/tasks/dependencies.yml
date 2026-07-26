@@ -20,7 +20,6 @@
       - jq
       - libgles-dev
       - libegl-dev
-      - libatlas-base-dev
       - libopenblas-dev
       - libgfortran5
       - libjpeg-dev
@@ -62,6 +61,8 @@
 # - libvolk2-dev (Bookworm) became libvolk-dev (Trixie)
 # - libncurses5-dev/libncursesw5-dev transitional packages were dropped in
 #   Trixie in favor of libncurses-dev
+# - libatlas-base-dev (ATLAS) was removed from Trixie; libopenblas-dev in the
+#   general list covers BLAS/LAPACK there
 - name: Installing version-specific dependencies (up to bookworm)
   become: yes
   apt:
@@ -72,6 +73,7 @@
       - libvolk2-dev
       - libncurses5-dev
       - libncursesw5-dev
+      - libatlas-base-dev
   when: raspbian_version.stdout != 'trixie'
 
 - name: Installing version-specific dependencies (trixie)
