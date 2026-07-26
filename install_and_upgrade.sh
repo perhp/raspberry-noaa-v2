@@ -44,6 +44,16 @@ fi
 log_running "Installing yaml and jsonschema Python modules..."
 sudo apt install python3-yaml python3-jsonschema -y
 
+# settings.yml is deliberately not tracked by git (see config/settings.yml.example)
+# so your station configuration never conflicts with a 'git pull'
+if [ ! -f config/settings.yml ]; then
+  cp config/settings.yml.example config/settings.yml
+  echo ""
+  echo "${YELLOW}A new config/settings.yml has been created from config/settings.yml.example.${RESET}"
+  echo "${YELLOW}Edit it with your station details (latitude, longitude, satellites, ...) and re-run this script.${RESET}"
+  exit 0
+fi
+
 log_running "Checking configuration files..."
 python3 scripts/tools/validate_yaml.py config/settings.yml config/settings_schema.json
 if [ $? -eq 0 ]; then

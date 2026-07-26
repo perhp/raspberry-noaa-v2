@@ -5,7 +5,7 @@
 *.swp
 *.swo
 
-# environment-specific config file
+# environment-specific config file (create yours from config/settings.yml.example)
 config/settings.yml
 
 # python bytecode caches

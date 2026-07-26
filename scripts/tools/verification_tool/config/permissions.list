@@ -91,6 +91,7 @@ file 644 $USER $USER /home/$USER/raspberry-noaa-v2/assets/header_1600_v2.png
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/assets/thermal_gauge.png
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/config/settings_schema.json
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/config/settings.yml
+file 644 $USER $USER /home/$USER/raspberry-noaa-v2/config/settings.yml.example
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/00_seed_schema.sql
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/01_add_spectrogram_bool.sql
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/db_migrations/02_add_noaa_pristine_bool.sql

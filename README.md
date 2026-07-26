@@ -63,7 +63,10 @@ cd $HOME
 git clone --depth 1 https://github.com/jekhokie/raspberry-noaa-v2.git
 cd raspberry-noaa-v2/
 
-# Edit settings to match your station's location, gain and other things
+# create your settings file from the template and edit it to match your
+# station's location, gain and other things (settings.yml is not tracked
+# by git, so your configuration never conflicts with future 'git pull's)
+cp config/settings.yml.example config/settings.yml
 nano config/settings.yml
 
 # perform install
@@ -144,7 +147,9 @@ cd $HOME
 git clone --depth 1 https://github.com/jekhokie/raspberry-noaa-v2.git
 cd raspberry-noaa-v2/
 
-# update your settings file to match your location, gain and other setup-specific settings
+# create your settings file from the template and update it to match your
+# location, gain and other setup-specific settings
+cp config/settings.yml.example config/settings.yml
 nano config/settings.yml
 
 # perform install
@@ -164,17 +169,9 @@ Run:
 
 `git pull`
 
-inside the raspberry-noaa-v2 folder. If it complains about rhe changes to `settings.yml` file, make a backup of it somewhere else on your Pi like the desktop:
+inside the raspberry-noaa-v2 folder, then re-run `./install_and_upgrade.sh`. Your `config/settings.yml` is not tracked by git, so pulling never conflicts with your station configuration.
 
-`mv config/settings.yml ~/Desktop`
-
-and run:
-
-`git pull`
-
-Then, open the settings file and edit it to match the settings from the previous file.
-
-***NOTE***: you may notice some extra variables or some variables missing. Don't worry, that's normal as some variables have been changed by the developers (either are taken care of automatically so were removed as they are redundant now, or some new thing has been implemented, hence new variables).
+***NOTE***: after an upgrade, compare your `config/settings.yml` against `config/settings.yml.example` - settings are occasionally added or retired. Leftover retired keys are harmless, but new features may need their new keys copied over.
 
 If you have elected to run a TLS-enabled web server, see [THIS LINK](docs/tls_webserver.md) for some additional information
 on how to handle self-signed certificates when attempting to visit your webpanel and enabling auth for the admin pages.
