@@ -299,6 +299,7 @@ table.telemetry tr.date-separator td {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  text-align: center;
   color: var(--blue);
 }
 
