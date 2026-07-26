@@ -49,19 +49,22 @@ while read -r start_epoch_time end_epoch_time max_elev starting_azimuth azimuth_
   timer=$((end_epoch_time - start_epoch_time + start_epoch_time % 60))
 
   schedule_enabled_by_sun_elev=1
+  sun_min_elev=""
   if [ "$OBJ_NAME" == "METEOR-M2 3" ]; then
-      START_SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
-      if [ "${START_SUN_ELEV}" -lt "${METEOR_M2_3_SCHEDULE_SUN_MIN_ELEV}" ]; then
-        log "Not scheduling Meteor-M2 3 with START TIME $start_epoch_time because $START_SUN_ELEV is below configured minimum sun elevation $METEOR_M2_3_SCHEDULE_SUN_MIN_ELEV" "INFO"
-        schedule_enabled_by_sun_elev=0
-      fi
+    sun_min_elev="${METEOR_M2_3_SCHEDULE_SUN_MIN_ELEV}"
+  elif [ "$OBJ_NAME" == "METEOR-M2 4" ]; then
+    sun_min_elev="${METEOR_M2_4_SCHEDULE_SUN_MIN_ELEV}"
   fi
-  if [ "$OBJ_NAME" == "METEOR-M2 4" ]; then
-      START_SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
-      if [ "${START_SUN_ELEV}" -lt "${METEOR_M2_4_SCHEDULE_SUN_MIN_ELEV}" ]; then
-        log "Not scheduling Meteor-M2 4 with START TIME $start_epoch_time because $START_SUN_ELEV is below configured minimum sun elevation $METEOR_M2_4_SCHEDULE_SUN_MIN_ELEV" "INFO"
-        schedule_enabled_by_sun_elev=0
-      fi
+  if [ -n "${sun_min_elev}" ]; then
+    START_SUN_ELEV=$("$PYTHON" "$SCRIPTS_DIR"/tools/sun.py "$start_epoch_time")
+    # a non-numeric reading means sun.py failed - log it rather than letting
+    # the comparison below error out and silently schedule the pass anyway
+    if ! [[ "$START_SUN_ELEV" =~ ^-?[0-9]+$ ]]; then
+      log "Could not determine sun elevation for $OBJ_NAME at START TIME $start_epoch_time (got '$START_SUN_ELEV') - scheduling regardless" "ERROR"
+    elif [ "${START_SUN_ELEV}" -lt "${sun_min_elev}" ]; then
+      log "Not scheduling $OBJ_NAME with START TIME $start_epoch_time because $START_SUN_ELEV is below configured minimum sun elevation $sun_min_elev" "INFO"
+      schedule_enabled_by_sun_elev=0
+    fi
   fi
 
   # schedule capture if elevation is above configured minimum

@@ -149,18 +149,20 @@ done < ${PACKAGE_LIST}
 
 loggit "INFO" ""
 loggit "INFO" "*************************************************"
-loggit "INFO" "*** Checking required PIP packages ***"
+loggit "INFO" "*** Checking required Python modules ***"
 loggit "INFO" "*************************************************"
 
 $HOME/.rn2_venv/bin/pip list > ${PIP_LOG}
-for pip_package in envbash;
+# the virtualenv is built with --system-site-packages, so these resolve to the
+# apt-installed modules - import them through the RN2 interpreter to confirm
+# they are actually reachable at runtime
+for py_module in ephem numpy matplotlib;
 do
-  v_result=$(cat ${PIP_LOG} | grep ${pip_package});
-  if [[ ${v_result} ]]; then
-    loggit "PASS" "${v_result}"
+  if $HOME/.rn2_venv/bin/python3 -c "import ${py_module}" > /dev/null 2>&1; then
+    loggit "PASS" "Python module ${py_module} is importable"
     PASSES=$(expr ${PASSES} + 1)
   else
-    loggit "FAIL" "Python package ${pip_package} is not installed"
+    loggit "FAIL" "Python module ${py_module} is not importable"
     FAILURES=$(expr ${FAILURES} + 1)
   fi
 done

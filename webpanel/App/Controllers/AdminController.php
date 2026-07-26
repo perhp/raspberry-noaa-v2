@@ -99,8 +99,11 @@ class AdminController extends \Lib\Controller {
       $capture->getEnhancements($capture_id);
       $capture->getImagePath($capture_id);
 
-      # delete images from disk
-      foreach ($capture->enhancements as $enhancement) {
+      # delete images from disk - the enhancements shown in the gallery plus
+      # the suffixes deliberately hidden from it, which would otherwise be
+      # orphaned in the thumbnail directory
+      $to_delete = array_merge($capture->enhancements, \App\Models\Capture::EXCLUDED_ENHANCEMENTS);
+      foreach ($to_delete as $enhancement) {
         $img = Config::IMAGE_PATH . '/' . $capture->image_path . $enhancement;
         $thumb = Config::THUMB_PATH . '/' . $capture->image_path . $enhancement;
 

@@ -32,18 +32,15 @@
       - wget
 
 # The RN2 virtualenv is created with system site-packages so the apt-installed
-# Python modules (numpy, matplotlib, ephem, ...) remain importable; only the
-# packages unavailable via apt are pip-installed into it. Runtime scripts use
-# it through the PYTHON variable rendered into ~/.noaa-v2.conf. Push-processor
-# libraries (tweepy, facebook-sdk, ...) are added to the same virtualenv by
-# social_media.yml when their push option is enabled.
-- name: Install pip-only Python packages into the RN2 virtualenv
-  pip:
-    name:
-      - envbash==1.2.0
-    state: present
-    virtualenv: /home/{{ target_user }}/.rn2_venv
-    virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
+# Python modules (numpy, matplotlib, ephem, ...) remain importable. Runtime
+# scripts use it through the PYTHON variable rendered into ~/.noaa-v2.conf.
+# It holds no packages by default - push-processor libraries (tweepy,
+# facebook-sdk, ...) are added to it by social_media.yml when their push
+# option is enabled.
+- name: Create the RN2 virtualenv
+  command: /usr/bin/python3 -m venv --system-site-packages /home/{{ target_user }}/.rn2_venv
+  args:
+    creates: /home/{{ target_user }}/.rn2_venv/bin/python3
 
 # SatDump ships no Trixie package upstream, so it is built from source against
 # the distro's volk 3.x / nng 1.10

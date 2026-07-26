@@ -36,9 +36,9 @@ SQLITE3="/usr/bin/sqlite3"
 SATDUMP="/usr/bin/satdump"
 
 # Python interpreter - ~/.noaa-v2.conf points this at the RN2 virtualenv,
-# which contains the pip-only packages (envbash, facebook-sdk) on top of the
-# system site-packages; fall back to the system interpreter on installs that
-# predate the virtualenv
+# which contains the pip-only push-processor packages (facebook-sdk, tweepy)
+# on top of the system site-packages; fall back to the system interpreter on
+# installs that predate the virtualenv
 PYTHON="${PYTHON:-/usr/bin/python3}"
 
 # record capture lifecycle status ('capturing', 'processing', 'received',

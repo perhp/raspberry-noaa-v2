@@ -104,173 +104,70 @@ class Capture extends \Lib\Model {
     $this->sat_list = $sats;
   }
 
+  # suffixes that are not satellite imagery - these are appended after the
+  # imagery so the graphs and diagnostics sort to the end of the gallery
+  const AUXILIARY_ENHANCEMENTS = [
+      '-spectrogram.png',
+      '-polar-azel.jpg',
+      '-polar-direction.png',
+      '-pristine.png',
+      '-histogram.jpg',
+  ];
+
+  # suffixes that exist only to be served elsewhere and must never show up as
+  # an enhancement in the gallery
+  const EXCLUDED_ENHANCEMENTS = [
+      '-website-thumbnail.jpg',
+  ];
+
   # get the enhancements for the particular capture
+  #
+  # The products SatDump emits vary by satellite, decoder version, signal
+  # quality and illumination, so this enumerates what is actually on disk
+  # instead of intersecting with a hardcoded day/night list - under the old
+  # approach any product missing from the list (for example the 221, 321 and
+  # MSA composites on a night pass) was silently dropped from the gallery.
   public function getEnhancements($id) {
-    $query = $this->db_conn->prepare('SELECT daylight_pass,
-                                             sat_type,
-                                             file_path,
-                                             img_count,
-                                             has_spectrogram,
-                                             has_polar_az_el,
-                                             has_polar_direction,
-                                             has_pristine,
-                                             has_histogram
+    $query = $this->db_conn->prepare('SELECT file_path
                                       FROM decoded_passes
                                       WHERE id = ?;');
     $query->bindValue(1, $id);
     $result = $query->execute();
     $pass = $result->fetchArray();
-
-    # build enhancement paths based on satellite type
-    switch($pass['sat_type']) {
-      case 0: // Meteor
-        if ($pass['daylight_pass'] == 1) {
-          $enhancements = array_map(function($x) { return "-" . $x . ".jpg"; }, explode(' ', Config::METEOR_DAY_ENHANCEMENTS));
-          $additional_enhancements = [
-              '-MSA_corrected.jpg',
-              '-MSA_projected.jpg',
-              '-Natural_Color_corrected.jpg',
-              '-Natural_Color_projected.jpg',
-              '-Day_Microphysics_corrected.jpg',
-              '-Day_Microphysics_projected.jpg',
-              '-124_corrected.jpg',
-              '-124_projected.jpg',
-              '-456_corrected.jpg',
-              '-456_projected.jpg',
-              '-39um_Shortwave_IR_corrected.jpg',
-              '-39um_Shortwave_IR_projected.jpg',
-              '-39um_Shortwave_IR_Calibrated_corrected.jpg',
-              '-39um_Shortwave_IR_Calibrated_projected.jpg',
-              '-MSU-MR-1.jpg',
-              '-MSU-MR-2.jpg',
-              '-MSU-MR-3.jpg',
-              '-MSU-MR-4.jpg',
-              '-MSU-MR-5.jpg',
-              '-MSU-MR-6.jpg',
-              '-321_equirect_projected.jpg',
-              '-221_equirect_projected.jpg',
-              '-MSA_equirect_projected.jpg',
-              '-MCIR_equirect_projected.jpg',
-              '-Thermal_Channel_equirect_projected.jpg',
-              '-Night_Microphysics_equirect_projected.jpg',
-              '-654_equirect_projected.jpg',
-              '-MCIR_corrected.jpg',
-              '-MCIR_projected.jpg',
-              '-321_corrected.jpg',
-              '-321_projected.jpg',
-              '-221_corrected.jpg',
-              '-221_projected.jpg',
-              '-654_corrected.jpg',
-              '-654_projected.jpg',
-              '-Night_Microphysics_corrected.jpg',
-              '-Night_Microphysics_projected.jpg',
-              '-Thermal_Channel_corrected.jpg',
-              '-Thermal_Channel_projected.jpg',
-              '-negative224_corrected.jpg',
-              '-negative224_projected.jpg',
-              '-4_corrected.jpg',
-              '-4_projected.jpg',
-          ];
-        } else {
-          $enhancements = array_map(function($x) { return "-" . $x . ".jpg"; }, explode(' ', Config::METEOR_NIGHT_ENHANCEMENTS));
-          $additional_enhancements = [
-              '-MCIR_corrected.jpg',
-              '-MCIR_projected.jpg',
-              '-654_corrected.jpg',
-              '-654_projected.jpg',
-              '-456_corrected.jpg',
-              '-456_projected.jpg',
-              '-39um_Shortwave_IR_corrected.jpg',
-              '-39um_Shortwave_IR_projected.jpg',
-              '-39um_Shortwave_IR_Calibrated_corrected.jpg',
-              '-39um_Shortwave_IR_Calibrated_projected.jpg',
-              '-MSU-MR-1.jpg',
-              '-MSU-MR-2.jpg',
-              '-MSU-MR-3.jpg',
-              '-MSU-MR-4.jpg',
-              '-MSU-MR-5.jpg',
-              '-MSU-MR-6.jpg',
-              '-MCIR_equirect_projected.jpg',
-              '-Thermal_Channel_equirect_projected.jpg',
-              '-Night_Microphysics_equirect_projected.jpg',
-              '-654_equirect_projected.jpg',
-              '-Night_Microphysics_corrected.jpg',
-              '-Night_Microphysics_projected.jpg',
-              '-Thermal_Channel_corrected.jpg',
-              '-Thermal_Channel_projected.jpg',
-              '-124_corrected.jpg',
-              '-124_projected.jpg',
-              '-negative224_corrected.jpg',
-              '-negative224_projected.jpg',
-              '-421_corrected.jpg',
-              '-421_projected.jpg',
-              '-4_corrected.jpg',
-              '-4_projected.jpg',
-          ];
-        }
-        $enhancements = array_merge($enhancements, $additional_enhancements);
-        break;
-      case 1: // NOAA
-        if ($pass['daylight_pass'] == 1) {
-          $enhancements = array_map(function($x) { return "-" . $x . ".jpg"; }, explode(' ', Config::NOAA_DAY_ENHANCEMENTS));
-        } else {
-          $enhancements = array_map(function($x) { return "-" . $x . ".jpg"; }, explode(' ', Config::NOAA_NIGHT_ENHANCEMENTS));
-        }
-        $satdump_enhancements = [
-            "Clouds_Underlay.jpg",
-            "-224.jpg",
-            "-MSA_Rain.jpg",
-            "-MCIR_Rain.jpg",
-            "-Thermal_Channel.jpg",
-            "-Sea_Surface_Temperature.jpg",
-            "-WXtoImg_HVC_N15.jpg",
-            "-WXtoImg_HVC_N18.jpg",
-            "-WXtoImg_HVC_N19.jpg",
-            "-WXtoImg_NO.jpg",
-            "-APT-A.jpg",
-            "-APT-B.jpg",
-            "-APT_channel_A.jpg",
-            "-APT_channel_B.jpg",
-            "-raw.jpg",
-            "-A_individual_equalized.jpg",
-            "-B_individual_equalized.jpg",
-            "-AVHRR-1.jpg",
-            "-AVHRR-4.jpg"
-        ];
-        $enhancements = array_merge($enhancements, $satdump_enhancements);
-        break;
+    if ($pass === false) {
+      $this->enhancements = [];
+      return;
     }
 
-    # remove any enhancements that do not actually exist for this capture
-    foreach ($enhancements as $e) {
-      $filepath = Config::IMAGE_PATH . '/' . $pass['file_path'] . $e;
-      if (!file_exists($filepath)) {
-        $key = array_search($e, $enhancements);
-        unset($enhancements[$key]);
+    # glob() treats *, ? and [] as wildcards, so escape them - capture
+    # filenames are generated as <sat>-<date>-<time> and never contain them,
+    # but a stray character must not widen the match to other captures
+    $prefix = Config::IMAGE_PATH . '/' . $pass['file_path'];
+    $pattern = preg_replace('/([*?\[\]])/', '[$1]', $prefix) . '-*';
+
+    $imagery = [];
+    $auxiliary = [];
+    foreach (glob($pattern) as $file) {
+      $suffix = substr($file, strlen($prefix));
+      if (in_array($suffix, self::EXCLUDED_ENHANCEMENTS)) {
+        continue;
+      }
+      if (!in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif'])) {
+        continue;
+      }
+      if (in_array($suffix, self::AUXILIARY_ENHANCEMENTS)) {
+        $auxiliary[] = $suffix;
+      } else {
+        $imagery[] = $suffix;
       }
     }
 
-    # capture spectrogram if one exists
-    if ($pass['has_spectrogram'] == '1') {
-      array_push($enhancements, '-spectrogram.png');
-    }
-    # capture polar azimuth elevation graph if one exists
-    if ($pass['has_polar_az_el'] == '1') {
-      array_push($enhancements, '-polar-azel.jpg');
-    }
-    # capture polar direction graph if one exists
-    if ($pass['has_polar_direction'] == '1') {
-      array_push($enhancements, '-polar-direction.png');
-    }
-    # capture pristine if one exists
-    if ($pass['has_pristine'] == '1') {
-      array_push($enhancements, '-pristine.png');
-    }
-    if ($pass['has_histogram'] == '1') {
-      array_push($enhancements, '-histogram.jpg');
-    }
+    sort($imagery);
+    # keep the auxiliary graphs in the order declared above rather than
+    # alphabetically, so the gallery tail is stable across captures
+    $auxiliary = array_values(array_intersect(self::AUXILIARY_ENHANCEMENTS, $auxiliary));
 
-    $this->enhancements = $enhancements;
+    $this->enhancements = array_merge($imagery, $auxiliary);
   }
 
   # get the image path for the specific capture

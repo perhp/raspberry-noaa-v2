@@ -1,33 +1,59 @@
-import envbash
-import ephem
-import time
-import sys
+#!/usr/bin/env python3
+#
+# Purpose: Print the elevation of the sun over the ground station at a given
+#          time. Used to classify captures as day/night passes and to gate
+#          Meteor scheduling on a minimum sun elevation.
+#
+# Input parameters:
+#   1. Epoch (unix seconds)
+#
+# Output: sun elevation in whole degrees, e.g. "-6"
+#
+# Example:
+#   ./sun.py 1613063493
+
 import os
-import subprocess  # Import the subprocess module
+import sys
+import time
 
-from envbash import load_envbash
+import ephem
 
-# Use parameter expansion to expand ~ to the home folder
-config_file = os.path.expanduser('~/.noaa-v2.conf')
+CONFIG_FILE = os.path.expanduser('~/.noaa-v2.conf')
 
-# Load bash environment vars
-load_envbash(config_file)
+def config_value(key):
+  '''
+  Read a single KEY=value setting out of ~/.noaa-v2.conf.
 
-# Use subprocess to get the local time offset from UTC
-timezone = float(subprocess.check_output('echo $(date "+%:::z") | sed "s/\\([+-]\\)0\\?/\\1/" | sed "s/:30/.5/"', shell=True, text=True))
-
-date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(sys.argv[1]) - (timezone * 60 * 60)))
-
-lat = str(os.environ['LAT'])
-lon = str(os.environ['LON'])
+  The config is bash-sourceable but its values are not exported, so they are
+  not inherited by this process. Parsing the file here also avoids depending
+  on envbash, which is unusable from Python 3.13 onwards - it imports the
+  'pipes' module that was removed from the standard library.
+  '''
+  with open(CONFIG_FILE) as f:
+    for line in f:
+      line = line.strip()
+      if line.startswith('#') or '=' not in line:
+        continue
+      name, _, value = line.partition('=')
+      name = name.strip()
+      if name.startswith('export '):
+        name = name[len('export '):].strip()
+      if name != key:
+        continue
+      value = value.strip()
+      if len(value) > 1 and value[0] == value[-1] and value[0] in ('"', "'"):
+        value = value[1:-1]
+      return value
+  raise KeyError('%s is not set in %s' % (key, CONFIG_FILE))
 
 obs = ephem.Observer()
-obs.lat = lat
-obs.long = lon
-obs.date = date
+# strings are read as degrees by ephem (floats would be radians)
+obs.lat = str(config_value('LAT'))
+obs.long = str(config_value('LON'))
+# ephem interprets observer dates as UTC
+obs.date = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(int(sys.argv[1])))
 
 sun = ephem.Sun(obs)
 sun.compute(obs)
-sun_angle = float(sun.alt) * 57.2957795  # Rad to deg
 
-print(int(sun_angle))
+print(int(float(sun.alt) * 57.2957795))  # rad to deg
