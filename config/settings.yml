@@ -14,16 +14,16 @@ lang_setting: en
 # ntp configurations
 #   ntp_server - if you have a local server (e.g. stratum1), you can use this setting
 #        to specify a hostname or ip address to communicate with the ntp server
-ntp_server: ''
+ntp_server: ""
 
 # receiver settings
 #   receiver_type - the receiver type which program uses ('rtlsdr', 'airspy_mini', 'airspy_r2', 'airspy_hf_plus_discovery', 'hackrf', 'sdrplay' or 'mirisdr')
 #   noaa_decoder - which receiver method to use (either 'wxtoimg' or 'satdump')
 #   meteor_decoder - which receiver method to use (either 'meteordemod' or 'satdump')
-receiver_type: 'rtlsdr'
+receiver_type: "rtlsdr"
 
-noaa_decoder: 'wxtoimg'
-meteor_decoder: 'meteordemod'
+noaa_decoder: "satdump"
+meteor_decoder: "satdump"
 
 # test settings when running test scripts
 #   test_gain - gain to use for scanner test scripts
@@ -55,7 +55,7 @@ select_best_overlapping_passes: true
 select_meteor_pass_over_noaa: true
 use_device_string: false
 
-noaa_15_schedule: true
+noaa_15_schedule: false
 noaa_15_sdr_device_id: 0
 noaa_15_freq_offset: 0
 noaa_15_enable_bias_tee: false
@@ -63,7 +63,7 @@ noaa_15_gain: 29.7
 noaa_15_sun_min_elevation: 6
 noaa_15_sat_min_elevation: 30
 
-noaa_18_schedule: true
+noaa_18_schedule: false
 noaa_18_sdr_device_id: 0
 noaa_18_freq_offset: 0
 noaa_18_enable_bias_tee: false
@@ -71,7 +71,7 @@ noaa_18_gain: 29.7
 noaa_18_sun_min_elevation: 6
 noaa_18_sat_min_elevation: 30
 
-noaa_19_schedule: true
+noaa_19_schedule: false
 noaa_19_sdr_device_id: 0
 noaa_19_freq_offset: 0
 noaa_19_enable_bias_tee: false
@@ -83,7 +83,7 @@ meteor_m2_3_schedule: true
 meteor_m2_3_sdr_device_id: 0
 meteor_m2_3_freq_offset: 0
 meteor_m2_3_enable_bias_tee: false
-meteor_m2_3_gain: 29.7
+meteor_m2_3_gain: 40.2
 meteor_m2_3_schedule_sun_min_elevation: -6
 meteor_m2_3_sun_min_elevation: 6
 meteor_m2_3_sat_min_elevation: 30
@@ -93,7 +93,7 @@ meteor_m2_4_schedule: true
 meteor_m2_4_sdr_device_id: 0
 meteor_m2_4_freq_offset: 0
 meteor_m2_4_enable_bias_tee: false
-meteor_m2_4_gain: 29.7
+meteor_m2_4_gain: 40.2
 meteor_m2_4_schedule_sun_min_elevation: -6
 meteor_m2_4_sun_min_elevation: 6
 meteor_m2_4_sat_min_elevation: 30
@@ -169,21 +169,21 @@ delete_files_older_than_days: 3
 #   noaa_map_country_border_color - color of country borders
 #   noaa_map_state_border_enable - whether to enable state borders in images (Americas only)
 #   noaa_map_state_border_color - color of state borders (Americas only)
-produce_polar_az_el_graph: false
+produce_polar_az_el_graph: true
 produce_polar_direction_graph: true
-ground_station_location: ''
-produce_spectrogram: false    #NOTE: the spectrogram option here is available for NOAA only, and the spectrogrma produced is from demodulated audio, not IQ baseband file
+ground_station_location: ""
+produce_spectrogram: false #NOTE: the spectrogram option here is available for NOAA only, and the spectrogrma produced is from demodulated audio, not IQ baseband file
 
 noaa_crop_telemetry: false
 produce_noaa_pristine_image: false
 produce_noaa_pristine_histogram: false
-noaa_daytime_enhancements: 'MSA MSA-precip MCIR MCIR-precip HVC-precip HVCT-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO histeq enhanced-IR'
-noaa_nighttime_enhancements: 'MCIR MCIR-precip HVCT ZA therm NO TA sea histeq enhanced-IR'
+noaa_daytime_enhancements: "MSA MSA-precip MCIR MCIR-precip HVC-precip HVCT-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO histeq enhanced-IR"
+noaa_nighttime_enhancements: "MCIR MCIR-precip HVCT ZA therm NO TA sea histeq enhanced-IR"
 noaa_crop_toptobottom: false
 noaa_interpolate: false
 noaa_jpg_image_quality: 90
 noaa_thermal_temp_overlay: true
-noaa_thermal_temp_overlay_location: 'NorthEast'
+noaa_thermal_temp_overlay_location: "NorthEast"
 noaa_map_crosshair_enable: true
 noaa_map_crosshair_color: "0xcc3030"
 noaa_map_grid_degrees: 10.0
@@ -192,25 +192,25 @@ noaa_map_country_border_enable: true
 noaa_map_country_border_color: "0xffff00"
 noaa_map_state_border_enable: true
 noaa_map_state_border_color: "0xffff00"
-wxtoimg_map_offset: 10.5                    #Change this value only if you see map offsets from the ground on WXtoImg NOAA images
+wxtoimg_map_offset: 10.5 #Change this value only if you see map offsets from the ground on WXtoImg NOAA images
 
 # meteor enhancement tokens used by the SatDump decoder (in addition to the meteordemod ones):
 #   39um - 3.9um shortwave IR images (uncalibrated + temperature-calibrated), new with SatDump 1.2.2
 #   fire - night time fire detection composite (off by default)
 # note: meteor_create_equidistant_projection additionally enables equirectangular projected
 #       versions of the main SatDump composites (321/221/MSA/MCIR/Thermal/Night Micro/654)
-meteor_daytime_enhancements: '221 321 124 MSA MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR 39um'
-meteor_nighttime_enhancements: '654 456 MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR 39um'
+meteor_daytime_enhancements: "221 321 124 MSA MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR 39um"
+meteor_nighttime_enhancements: "654 456 MCIR MCIR-precip HVC HVCT ZA therm sea CC HE HF MD BD MB JF JJ LC TA WV NO enhanced-IR 39um"
 flip_meteor_image: true
 meteor_jpg_image_quality: 90
-meteor_draw_map_overlay: true
-meteor_draw_cities: true
-meteor_map_crosshair_enable: true
+meteor_draw_map_overlay: false
+meteor_draw_cities: false
+meteor_map_crosshair_enable: false
 meteor_map_crosshair_color: "#CC3030"
 meteor_map_country_border_color: "#FFFF00"
 meteor_create_rain_probability_overlay: true
 meteor_create_equidistant_projection: true
-meteor_create_mercator_projection: false
+meteor_create_mercator_projection: true
 meteor_create_spreaded_images_without_overlay: true
 
 # web server configuration settings
@@ -238,10 +238,10 @@ web_port: 80
 enable_tls: false
 web_tls_port: 443
 lock_admin_page: true
-admin_username: 'admin'
-admin_password: 'admin'
-web_passes_date_format: 'm/d/Y'
-web_datetime_format: 'm/d/Y H:i:s'
+admin_username: "admin"
+admin_password: "admin"
+web_passes_date_format: "m/d/Y"
+web_datetime_format: "m/d/Y H:i:s"
 
 # log level for output from scripts
 log_level: DEBUG
@@ -251,7 +251,6 @@ log_level: DEBUG
 # by default disabled on "extra-small" devices such as phones due to
 # the processing and space requirements
 enable_satvis: true
-
 
 # whether to enable the "Coronal mass ejection activity" display
 # in the passes view - note that the GIFs can be ~70 MiB and not cached
@@ -289,18 +288,18 @@ disable_at_mail: false
 # Thank you very much if you choose to contribute :)
 
 contribute_to_community_composites: false
-contribute_to_community_composites_url: 'https://voxgalactica.com/upload'
+contribute_to_community_composites_url: "https://voxgalactica.com/upload"
 
 enable_email_push: false
 email_push_address: test@ifttt.com
 enable_email_schedule_push: false
 enable_discord_push: true
-discord_noaa_webhook_url: 'https://discord.com/api/webhooks/1135901731918717068/ZELG3Sv1fRxQ8KgoYtMMOBYM07az0yIkzeLdad-8WxxhV-F8LhPQdZFFon044awMvLsD'
-discord_meteor_webhook_url: 'https://discord.com/api/webhooks/1135901731918717068/ZELG3Sv1fRxQ8KgoYtMMOBYM07az0yIkzeLdad-8WxxhV-F8LhPQdZFFon044awMvLsD'
+discord_noaa_webhook_url: "https://discord.com/api/webhooks/1135901731918717068/ZELG3Sv1fRxQ8KgoYtMMOBYM07az0yIkzeLdad-8WxxhV-F8LhPQdZFFon044awMvLsD"
+discord_meteor_webhook_url: "https://discord.com/api/webhooks/1135901731918717068/ZELG3Sv1fRxQ8KgoYtMMOBYM07az0yIkzeLdad-8WxxhV-F8LhPQdZFFon044awMvLsD"
 enable_pushover_push: false
-pushover_link_url: 'https://<url-to-webpanel>/captures/listImages'
-pushover_apitoken: ''
-pushover_user: ''
+pushover_link_url: "https://<url-to-webpanel>/captures/listImages"
+pushover_apitoken: ""
+pushover_user: ""
 pushover_prio: 0
 enable_twitter_push: false
 enable_bluesky_push: false
@@ -308,8 +307,8 @@ enable_mastodon_push: false
 enable_facebook_push: false
 enable_instagram_push: false
 enable_slack_push: false
-slack_push_url: ''
-slack_push_to: ''
-slack_link: 'https://XXXX/captures/listImages'
+slack_push_url: ""
+slack_push_to: ""
+slack_link: "https://XXXX/captures/listImages"
 enable_matrix_push: false
 ...
