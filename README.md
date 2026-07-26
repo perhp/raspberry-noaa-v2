@@ -4,6 +4,9 @@ A complete, self-hosted ground station for receiving, decoding, and sharing **NO
 
 One command installs everything. After that, the station runs itself: it predicts passes, schedules captures, decodes images with [SatDump](https://github.com/SatDump/SatDump), publishes them to a built-in web panel, and (optionally) pushes them to your favorite social/chat platforms.
 
+![The webpanel passes page, with a Meteor-M2 capture in progress](assets/webpanel_passes_live.png)
+*The webpanel's passes page during a live Meteor-M2 3 capture: real-time SatDump decoder status in the banner, and the upcoming pass schedule below. More screenshots [here](docs/webpanel_screenshots.md).*
+
 Looking for support, wanting to talk about new features, or just hanging out? Come chat with us on [Discord](https://discord.gg/A9w68pqBuc)!
 
 > _This project is a spinoff of the original [raspberry-noaa](https://github.com/reynico/raspberry-noaa) created by Nico, who graciously permitted this major refactor to push the project forward. All original history and credit is preserved — see [Credits](#credits)._
