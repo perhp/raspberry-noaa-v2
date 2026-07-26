@@ -1,122 +1,94 @@
 {% extends "base.html" %}
 
-{% block stylesheets %}
-  <link rel="stylesheet" type="text/css" href="/assets/css/pagination.css">
-  <link rel="stylesheet" type="text/css" href="/assets/css/admin.css">
-{% endblock %}
-
 {% block body %}
+  {% include('Admin/nav.html') %}
+
   {% if status_msg is defined %}
     {% if status_msg == 'Success' %}
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <div class="alert alert-success" role="alert">
         {{ lang['successful_delete_capture'] }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="alert-close" aria-label="Close">&times;</button>
       </div>
     {% else %}
-      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <div class="alert alert-error" role="alert">
         {{ status_msg }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="alert-close" aria-label="Close">&times;</button>
       </div>
     {% endif %}
   {% endif %}
 
-  {% include('Admin/nav.html') %}
-
-  <p class="lead text-center">
-    {{ lang['admin_capture_delete_warning'] }}
-  </p>
-
-  <nav aria-label="page" id="pagination" class="mb-0">
-    {% include('Captures/pagination.html') %}
-  </nav>
-
-  <div class="page-count-summary mb-0 mx-2 my-1">
-    {{ "#{lang['page']} #{cur_page} #{lang['of']} #{page_count}" }}
+  <div class="caution">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5L14.5 13.5H1.5z"/><path d="M8 7v3"/><path d="M8 12v.01"/></svg>
+    <span>{{ lang['admin_capture_delete_warning'] }}</span>
   </div>
 
-  <table class="table table-bordered" id="admin-capture-list">
-    <thead class="thead-light">
-      <tr>
-        <th scope="col" class="text-center"></th>
-        <th scope="col" class="text-center align-middle">{{ lang['satellite'] }}</th>
-        <th scope="col" class="text-center align-middle">{{ lang['pass_start'] }} / {{ lang['max_elev'] }}</th>
-        <th scope="col" class="text-center align-middle">{{ lang['image'] }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for capture in capture.list %}
-        <tr scope="row">
-          <td class="capture-select text-center align-middle">
-            <button type="button" class="btn btn-sm btn-danger delete-capture" data-toggle="modal"
-                                 data-capture-id="{{ capture.id }}"
-                                 data-sat-name="{{ capture.sat_name }}"
-                                 data-elevation="{{ capture.max_elev }}"
-                                 data-pass-start="{{ capture.pass_start|date(constant('Config\\Config::DATETIME_FORMAT')) }}"
-                                 data-target="#confirmDeleteCapture"><i class="fa fa-trash"></i></button>
-          </td>
-          <td class="capture-sat-name text-center align-middle">{{ capture.sat_name }}</td>
-          <td class="capture-pass-start-elev text-center align-middle">
-            {{ capture.pass_start|date(constant('Config\\Config::DATETIME_FORMAT')) }} @
-            {{ capture.max_elev }}&#176;
-          </td>
-          <td class="capture-thumbnail text-center align-middle">
-            <a href="/captures/listImages?pass_id={{ capture.id }}">
-              {% if capture.sat_type == 0 %}
-               {% if capture.daylight_pass == 1 %}
-                 <img class="card-img-top" src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-website-thumbnail.jpg">
-               {% else %}
-                 <img class="card-img-top" src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-website-thumbnail.jpg">
-               {% endif %}
-               {% elseif capture.sat_type == 1 %}
-                 {% if capture.daylight_pass == 1 %}
-                 <img class="card-img-top" src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-MSA.jpg">
-               {% else %}
-                 <img class="card-img-top" src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-MCIR.jpg">
-               {% endif %}
-               {% elseif capture.sat_type == 2 %}
-                 <img class="card-img-top" src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-0.jpg">
-              {% endif %}
-            </a>
-          </td>
+  {% include('Captures/pagination.html') %}
+
+  <div class="table-panel">
+    <table class="telemetry" id="admin-capture-list">
+      <thead>
+        <tr>
+          <th class="center"></th>
+          <th class="center">{{ lang['satellite'] }}</th>
+          <th class="center">{{ lang['pass_start'] }} / {{ lang['max_elev'] }}</th>
+          <th class="center">{{ lang['image'] }}</th>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <nav aria-label="page" id="pagination" class="d-md-none mb-0">
-    {% include('Captures/pagination.html') %}
-  </nav>
-
-  <div class="modal fade" id="confirmDeleteCapture" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="confirmDeleteLabel">{{ lang['admin_delete_confirm_header'] }}</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p id="contents">
-            <strong>{{ lang.satellite }}: </strong><span id="satellite-name"></span><br>
-            <strong>{{ lang.pass_start }}: </strong><span id="pass-start"></span><br>
-            <strong>{{ lang.elev }}: </strong><span id="capture-elevation"></span>&#176;<br>
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ lang['cancel'] }}</button>
-          <a href="" id="confirmDeletion" type="button" class="btn btn-danger">{{ lang['confirm'] }}</a>
-        </div>
-      </div>
-    </div>
+      </thead>
+      <tbody>
+        {% for capture in capture.list %}
+          <tr>
+            <td class="center">
+              <button type="button" class="btn-delete" title="{{ lang['admin_delete_confirm_header'] }}"
+                      data-sat-name="{{ capture.sat_name }}"
+                      data-elevation="{{ capture.max_elev }}"
+                      data-pass-start="{{ capture.pass_start|date(constant('Config\\Config::DATETIME_FORMAT')) }}"
+                      data-confirm-href="/admin/deleteCapture?id={{ capture.id }}">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11"/><path d="M6.5 4V2.5h3V4"/><path d="M4 4l.8 9.5h6.4L12 4"/><path d="M6.5 6.5v4.5M9.5 6.5v4.5"/></svg>
+              </button>
+            </td>
+            <td class="center">{{ capture.sat_name }}</td>
+            <td class="center num">
+              {{ capture.pass_start|date(constant('Config\\Config::DATETIME_FORMAT')) }} @
+              {{ capture.max_elev }}&#176;
+            </td>
+            <td class="center thumb-cell">
+              <a href="/captures/listImages?pass_id={{ capture.id }}">
+                {% if capture.sat_type == 0 %}
+                  <img src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-website-thumbnail.jpg" alt="{{ capture.sat_name }}">
+                {% elseif capture.sat_type == 1 %}
+                  {% if capture.daylight_pass == 1 %}
+                    <img src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-MSA.jpg" alt="{{ capture.sat_name }}">
+                  {% else %}
+                    <img src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-MCIR.jpg" alt="{{ capture.sat_name }}">
+                  {% endif %}
+                {% elseif capture.sat_type == 2 %}
+                  <img src="{{ constant('Config\\Config::THUMB_PATH') }}/{{ capture.file_path }}-0.jpg" alt="{{ capture.sat_name }}">
+                {% endif %}
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
-{% endblock %}
+  {% include('Captures/pagination.html') %}
 
-{% block js_includes %}
-  <script src="/assets/js/admin.js"></script>
+  <dialog class="confirm" id="confirm-delete" aria-labelledby="confirm-delete-label">
+    <div class="dialog-head" id="confirm-delete-label">{{ lang['admin_delete_confirm_header'] }}</div>
+    <div class="dialog-body">
+      <dl class="readout">
+        <dt>{{ lang.satellite }}</dt>
+        <dd data-field="satName"></dd>
+        <dt>{{ lang.pass_start }}</dt>
+        <dd data-field="passStart"></dd>
+        <dt>{{ lang.elev }}</dt>
+        <dd><span data-field="elevation"></span>&#176;</dd>
+      </dl>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" class="btn dialog-cancel">{{ lang['cancel'] }}</button>
+      <a href="" id="confirm-deletion" class="btn btn-danger">{{ lang['confirm'] }}</a>
+    </div>
+  </dialog>
 {% endblock %}

@@ -3,63 +3,53 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-    <link rel="stylesheet" type="text/css" href="/assets/css/header.css">
-    <link rel="stylesheet" type="text/css" href="/assets/css/footer.css">
+    <link rel="stylesheet" type="text/css" href="/assets/css/rn2.css">
 
     {% block stylesheets %}
     {% endblock %}
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
-                           integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css"
-                           integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+    {% block head_extra %}
+    {% endblock %}
 
     <title>Raspberry NOAA V2</title>
 
     <link rel="shortcut icon" href="/assets/web_img/favicon.ico" type="image/x-icon"/>
   </head>
   <body>
-    <header class="mb-3">
-      <div class="navbar navbar-expand navbar-dark bg-dark">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item {% if page == 'passes' %} active {% endif %}">
-            <a class="nav-link" href="/passes">{{ lang['passes'] }}</a>
-          </li>
-          <li class="nav-item {% if page == 'captures' or page == 'capture'  %} active {% endif %}">
-            <a class="nav-link" href="/captures?page_no=1">{{ lang['captures'] }}</a>
-          </li>
-          <li class="nav-item {% if page == 'admin' %} active {% endif %}">
-            <a class="nav-link" href="/admin/passes">{{ lang['admin'] }}</a>
-          </li>
-        </ul>
-        <span class="navbar-text timezone">
-          <em>
-            {{ constant('Config\\Config::TIMEZONE') }}<br>
-            (UTC{{ 'now'|date('P') }})
-          </em>
-        </span>
+    <header class="masthead">
+      <div class="masthead-inner">
+        <div class="station-plate">
+          <a href="/passes">
+            <div class="station-name">Raspberry NOAA V2</div>
+            <div class="station-sub">APT / LRPT Ground Station &middot; 137 MHz</div>
+          </a>
+        </div>
+        <nav>
+          <a{% if page == 'passes' %} class="active"{% endif %} href="/passes">{{ lang['passes'] }}</a>
+          <a{% if page == 'captures' or page == 'capture' %} class="active"{% endif %} href="/captures?page_no=1">{{ lang['captures'] }}</a>
+          <a{% if page == 'admin' %} class="active"{% endif %} href="/admin/passes">{{ lang['admin'] }}</a>
+        </nav>
+        <div class="station-clock">
+          <span>{{ constant('Config\\Config::TIMEZONE') }}</span>
+          <span class="tz-offset">UTC{{ 'now'|date('P') }}</span>
+        </div>
       </div>
     </header>
-    <div class="container">
+
+    <main class="wrap">
       {% block pre_body %}
       {% endblock %}
 
       {% block body %}
       {% endblock %}
-    </div>
+    </main>
 
-    <footer class="footer text-center">
-      <div class="container">
-        <a href="https://github.com/jekhokie/raspberry-noaa-v2"><img class="img-footer" src="/assets/web_img/logo-small-v2.png" alt="logo"></a>
-      </div>
+    <footer class="site-footer">
+      <a href="https://github.com/jekhokie/raspberry-noaa-v2"><img src="/assets/web_img/logo-small-v2.png" alt="raspberry-noaa-v2 on GitHub"></a>
     </footer>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
-            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+    <script src="/assets/js/rn2.js"></script>
 
     {% block js_includes %}
     {% endblock %}

@@ -1,129 +1,146 @@
 {% extends "base.html" %}
 
-{% block stylesheets %}
-  <link rel="stylesheet" type="text/css" href="/assets/css/pass_list.css">
-{% endblock %}
-
-{% block pre_body %}
-  <br><center><h1><strong>NOAA APT and Meteor LRPT Satellite Receiver</strong></h1></center><br>
-  <div id="instruments" class="flex-container">
-    {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
-      <div id="satvis" class="d-none d-sm-block flex-child">
-        <iframe name="satvis" src="https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&tags=Weather"></iframe>
-      </div>
-    {% endif %}
-
-    {% if constant('Config\\Config::ENABLE_ANIMATION') == 'true' %}
-      <div id="noaa-animation" class="d-none d-sm-block flex-child">
-        <video playsinline autoplay muted loop controls src="{{ constant('Config\\Config::ANIMATION_VIDEO_FILE') }}" width="100%" height="100%" type="video/webm, codecs=vp9"></video>
-      </div>
-    {% endif %}
-  </div>
+{% block head_extra %}
+  {# keep the pass status lamps and solar terminator current on wall displays #}
+  <meta http-equiv="refresh" content="300">
 {% endblock %}
 
 {% block body %}
-<center>
-      <meta http-equiv="refresh" content="300" url="https://www.timeanddate.com/scripts/sunmap.php">
-      <img src="https://www.timeanddate.com/scripts/sunmap.php?iso=&amp;earth=1" width="100%" height="100%">
-      <meta img="sunmap.php" src-equiv="refresh" content="300">
-    </center>
-  <table class="table table-bordered table-sm table-striped" id="passes">
-    <thead class="thead-dark">
-      <tr class="text-center">
-        <th scope="col">{{ lang['reception_status'] }}</th>
-        <th scope="col">{{ lang['satellite'] }}</th>
-        <th scope="col">{{ lang['pass_start'] }}</th>
-        <th scope="col">{{ lang['pass_end'] }}</th>
-        <th scope="col">{{ lang['max_elev'] }}</th>
-        <th scope="col" class="d-none d-sm-table-cell">{{ lang['pass_start_azimuth'] }}</th>
-        <th scope="col" class="d-none d-sm-table-cell">{{ lang['travel_direction'] }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% set now_ms = 'now'|date('U') %}
-      {% set cur_date = now_ms|date('m/d/y') %}
-      {% set last_date = 0 %}
-
-      {% if pass.list|length <= 0 %}
-        <tr>
-          <td colspan="7" class="no-passes">0 {{ lang['passes'] }}</td>
-        </tr>
-      {% else %}
-        {% for pass in pass.list %}
-          {% set pass_start = pass.pass_start|date('H:i:s') %}
-          {% set pass_end = pass.pass_end|date('H:i:s') %}
-          {% set cur_date = pass.pass_start|date('m/d/y') %}
-          {% set pass_end_ms = pass.pass_end|date('U') %}
-
-          {% if last_date < cur_date %}
-            <tr class="date-separator">
-              <td colspan="7">{{ cur_date|date(constant('Config\\Config::PASSES_DATE_FORMAT')) }}</td>
-            </tr>
-            {% set last_date = cur_date %}
-          {% endif %}
-
-          <tr{% if pass.is_active == false or pass_end_ms < now_ms %} class="inactive"{% endif %}>
-          
-            <td class=
-              {% if prev_pass_end >= pass.pass_start %} 
-                "text-center conflict"
-              {% elseif now_ms > pass.pass_start and now_ms < pass.pass_end %} 
-                "text-center running" 
-              {% elseif now_ms < pass.pass_start %}
-                "text-center next" 
-              {% else %}
-                "text-center no_capture"
-              {% endif %}
-                >
-              {% if pass.id %}
-                <i class="fa fa-check" data-toggle="tooltip" data-placement="right" title="{{ lang['completed_pass'] }}"></i>
-              {% elseif now_ms > pass.pass_start and now_ms < pass.pass_end %}
-                <i class="fa fa-spinner running-icon" data-toggle="tooltip" data-placement="right" title="{{ lang['running_pass'] }}"></i>
-              {% elseif prev_pass_end >= pass.pass_start %}
-                <i class="fa fa-exclamation-triangle conflict-icon" data-toggle="tooltip" data-placement="right" title="{{ lang['conflicting_pass'] }}"></i>
-              {% elseif now_ms < pass.pass_start %}
-                <i class="fa fa-hourglass-start next-icon" data-toggle="tooltip" data-placement="right" title="{{ lang['next_pass'] }}"></i>
-              {% else %}  
-                <i class="fa fa-times no_caption-icon" data-toggle="tooltip" data-placement="right" title="{{ lang['no_capture_pass'] }}"></i>
-              {% endif %}
-            </td>
-            <td>
-              {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
-                <a href='https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&tags=Weather&sat={{ pass.sat_name }}&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}' target='satvis'>{{ pass.sat_name }}</a>
-              {% else %}
-                {{ pass.sat_name }}
-              {% endif %}
-            </td>
-            <td class="text-center">{{ pass_start }}</td>
-            <td class="text-center">{{ pass_end }}</td>
-            <td class="text-center">
-              {{ pass.max_elev }}&#176;
-              {% if pass.azimuth_at_max != "" %}
-                {% if pass.azimuth_at_max >= 0 and pass.azimuth_at_max <= 180 %}E{% else %}W{% endif %}
-              {% endif %}
-            </td>
-            <td class="text-center d-none d-sm-table-cell">{% if pass.pass_start_azimuth != "" %}{{ pass.pass_start_azimuth }}&#176;{% endif %}</td>
-            <td class="text-center d-none d-sm-table-cell">{% if pass.direction != "" %}{{ pass.direction }}{% endif %}</td>
-          </tr>
-
-          {% set prev_pass_end = pass.pass_end %}
-        {% endfor %}
+  {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' or constant('Config\\Config::ENABLE_ANIMATION') == 'true' %}
+    <div class="panel-label">
+      <h2>Instruments</h2>
+      <span class="rule"></span>
+      <span class="label-aux">{{ constant('Config\\Config::BASE_STATION_LAT') }}, {{ constant('Config\\Config::BASE_STATION_LON') }}</span>
+    </div>
+    <div class="instrument-grid hide-sm">
+      {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
+        <div class="instrument" id="satvis">
+          <div class="instrument-body">
+            <iframe name="satvis" title="Orbital track" src="https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&tags=Weather"></iframe>
+          </div>
+        </div>
       {% endif %}
-    </tbody>
-  </table>
-  {% if constant('Config\\Config::ENABLE_CORONAL_GIF') == 'true' %}
-  <br>
-  <center>
-  <h1>Coronal Mass Ejection Activity</h1>
-  <br>
-  <img src="https://sohowww.nascom.nasa.gov/data/LATEST/current_c2.gif" height=300 style="margin-right=2em; margin-bottom:2em;">
-  <img src="https://sohowww.nascom.nasa.gov/data/LATEST/current_c3.gif" height=300 style="margin-right=2em; margin-bottom:2em;">
-  <img src="https://stereo.gsfc.nasa.gov/beacon/latest_512/ahead_cor2_latest.jpg" height=300 style="margin-right=2em; margin-bottom:2em;">
-  </center>
+
+      {% if constant('Config\\Config::ENABLE_ANIMATION') == 'true' %}
+        <div class="instrument" id="noaa-animation">
+          <div class="instrument-body">
+            <video playsinline autoplay muted loop controls src="{{ constant('Config\\Config::ANIMATION_VIDEO_FILE') }}" type="video/webm, codecs=vp9"></video>
+          </div>
+        </div>
+      {% endif %}
+    </div>
   {% endif %}
 
-{% endblock %}
+  <div class="panel-label">
+    <h2>Solar terminator</h2>
+    <span class="rule"></span>
+  </div>
+  <div class="instrument">
+    <div class="instrument-body">
+      <img src="https://www.timeanddate.com/scripts/sunmap.php?iso=&amp;earth=1" alt="Day and night across the Earth">
+    </div>
+  </div>
 
-{% block js_includes %}
-  <script src="/assets/js/tooltips.js"></script>
+  <div class="panel-label">
+    <h2>Pass schedule</h2>
+    <span class="rule"></span>
+  </div>
+  <div class="table-panel">
+    <table class="telemetry" id="passes">
+      <thead>
+        <tr>
+          <th class="center">{{ lang['reception_status'] }}</th>
+          <th>{{ lang['satellite'] }}</th>
+          <th class="center">{{ lang['pass_start'] }}</th>
+          <th class="center">{{ lang['pass_end'] }}</th>
+          <th>{{ lang['max_elev'] }}</th>
+          <th class="center hide-sm">{{ lang['pass_start_azimuth'] }}</th>
+          <th class="center hide-sm">{{ lang['travel_direction'] }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set now_ms = 'now'|date('U') %}
+        {% set cur_date = now_ms|date('m/d/y') %}
+        {% set last_date = 0 %}
+
+        {% if pass.list|length <= 0 %}
+          <tr>
+            <td colspan="7" class="no-passes">0 {{ lang['passes'] }}</td>
+          </tr>
+        {% else %}
+          {% for pass in pass.list %}
+            {% set pass_start = pass.pass_start|date('H:i:s') %}
+            {% set pass_end = pass.pass_end|date('H:i:s') %}
+            {% set cur_date = pass.pass_start|date('m/d/y') %}
+            {% set pass_end_ms = pass.pass_end|date('U') %}
+
+            {% if last_date < cur_date %}
+              <tr class="date-separator">
+                <td colspan="7">{{ cur_date|date(constant('Config\\Config::PASSES_DATE_FORMAT')) }}</td>
+              </tr>
+              {% set last_date = cur_date %}
+            {% endif %}
+
+            <tr{% if pass.is_active == false or pass_end_ms < now_ms %} class="inactive"{% endif %}>
+              <td class="center">
+                {% if pass.id %}
+                  <span class="lamp lamp-done" title="{{ lang['completed_pass'] }}">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7-8"/></svg>
+                  </span>
+                {% elseif now_ms > pass.pass_start and now_ms < pass.pass_end %}
+                  <span class="lamp lamp-running" title="{{ lang['running_pass'] }}">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" fill="currentColor"/></svg>
+                  </span>
+                {% elseif prev_pass_end >= pass.pass_start %}
+                  <span class="lamp lamp-conflict" title="{{ lang['conflicting_pass'] }}">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5L14.5 13.5H1.5z"/><path d="M8 7v3"/><path d="M8 12v.01"/></svg>
+                  </span>
+                {% elseif now_ms < pass.pass_start %}
+                  <span class="lamp lamp-next" title="{{ lang['next_pass'] }}">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+                  </span>
+                {% else %}
+                  <span class="lamp lamp-missed" title="{{ lang['no_capture_pass'] }}">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
+                  <a href='https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&tags=Weather&sat={{ pass.sat_name }}&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}' target='satvis'>{{ pass.sat_name }}</a>
+                {% else %}
+                  {{ pass.sat_name }}
+                {% endif %}
+              </td>
+              <td class="center num">{{ pass_start }}</td>
+              <td class="center num">{{ pass_end }}</td>
+              <td>
+                <span class="elev-gauge{% if pass.max_elev >= 60 %} prime{% endif %}">
+                  <span class="num">{{ pass.max_elev }}&#176;{% if pass.azimuth_at_max != "" %}{% if pass.azimuth_at_max >= 0 and pass.azimuth_at_max <= 180 %}E{% else %}W{% endif %}{% endif %}</span>
+                  <i style="--elev: {{ ((pass.max_elev / 90) * 100)|round }}%"><b></b></i>
+                </span>
+              </td>
+              <td class="center num hide-sm">{% if pass.pass_start_azimuth != "" %}{{ pass.pass_start_azimuth }}&#176;{% endif %}</td>
+              <td class="center num hide-sm">{% if pass.direction != "" %}{{ pass.direction }}{% endif %}</td>
+            </tr>
+
+            {% set prev_pass_end = pass.pass_end %}
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if constant('Config\\Config::ENABLE_CORONAL_GIF') == 'true' %}
+    <div class="panel-label">
+      <h2>Coronal mass ejection activity</h2>
+      <span class="rule"></span>
+      <span class="label-aux">SOHO LASCO C2 / C3 &middot; STEREO-A COR2</span>
+    </div>
+    <div class="coronal-row">
+      <div class="instrument"><div class="instrument-body"><img src="https://sohowww.nascom.nasa.gov/data/LATEST/current_c2.gif" alt="SOHO LASCO C2 latest image"></div></div>
+      <div class="instrument"><div class="instrument-body"><img src="https://sohowww.nascom.nasa.gov/data/LATEST/current_c3.gif" alt="SOHO LASCO C3 latest image"></div></div>
+      <div class="instrument"><div class="instrument-body"><img src="https://stereo.gsfc.nasa.gov/beacon/latest_512/ahead_cor2_latest.jpg" alt="STEREO-A COR2 latest image"></div></div>
+    </div>
+  {% endif %}
 {% endblock %}
