@@ -206,8 +206,11 @@
 #    state: present
 #    executable: pip3
 
+# pysqlite3 was dropped from this list: nothing in the repo imports it (the
+# Python scripts use the stdlib sqlite3 module) and 0.5.1 no longer compiles
+# against Python 3.13 on Trixie
 - name: Install required Python packages using pip3 since they aren't available among the apt packages
-  command: pip3 install envbash==1.2.0 facebook-sdk==3.1.0 pysqlite3==0.5.1 --break-system-packages
+  command: pip3 install envbash==1.2.0 facebook-sdk==3.1.0 --break-system-packages
   when: raspbian_version.stdout in ['bookworm', 'trixie']
 
 - name: Install required Python packages using pip3
