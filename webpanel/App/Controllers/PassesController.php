@@ -51,7 +51,17 @@ class PassesController extends \Lib\Controller {
     fclose($handle);
 
     $rows = preg_split('/\r?\n/', trim($data));
-    return array_slice($rows, -$lines);
+    $rows = array_slice($rows, -$lines);
+
+    # SatDump colors its output with ANSI escape codes that end up in the log
+    # verbatim, and its live mode reports a meaningless nan/inf progress
+    # percentage (no fixed input length) - clean both out of the banner lines
+    foreach ($rows as $i => $row) {
+      $row = preg_replace('/\x1b\[[0-9;]*[A-Za-z]/', '', $row);
+      $row = preg_replace('/Progress (?:nan|inf)%, /', '', $row);
+      $rows[$i] = $row;
+    }
+    return $rows;
   }
 }
 
