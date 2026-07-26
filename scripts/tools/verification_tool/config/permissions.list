@@ -124,6 +124,8 @@ file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templ
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templates/nginx_default_bullseye.j2
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templates/nginx_tls_default_bookworm.j2
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templates/nginx_tls_default_bullseye.j2
+file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templates/nginx_default_trixie.j2
+file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/roles/webserver/templates/nginx_tls_default_trixie.j2
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/site.yml
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/ansible/webserver.yml
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/assets/header_1600_v2.png
@@ -215,14 +217,8 @@ file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/Lib/Controller.php
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/Lib/Model.php
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/Lib/Router.php
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/Lib/View.php
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/admin.css
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/captures.css
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/footer.css
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/header.css
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/pagination.css
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/pass_list.css
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/js/admin.js
-file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/js/tooltips.js
+file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/css/rn2.css
+file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/js/rn2.js
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/assets/web_img/favicon.ico
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/enhancement_details.html
 file 644 $USER $USER /home/$USER/raspberry-noaa-v2/webpanel/public/index.php

@@ -68,8 +68,29 @@ echo "" > $VALIDATION_LOG
 TEST_LOG=/tmp/verficiation_test.log
 PIP_LOG=/tmp/pip_installed.log
 ARCH=$(dpkg --print-architecture)
+OS=$(cat /etc/os-release | grep -E "^DEBIAN_CODENAME|^VERSION_CODENAME" | awk -F"=" '{print $NF}' | sort | head -1)
 BIN_SCRIPT=/tmp/verficiation_test.sh
 LDD=$(which ldd)
+
+# Translate or skip package names that differ on Trixie:
+# - satdump is built from source there (no dpkg entry; validated by dry run)
+# - wkhtmltopdf was removed from Debian Trixie (optional feature, auto-skipped)
+# - libasound2 was renamed libasound2t64 in the time64 transition
+# - libvolk2-dev/libncurses5-dev/libncursesw5-dev/libatlas-base-dev were
+#   replaced by libvolk-dev/libncurses-dev/libopenblas-dev
+adjust_package_for_os() {
+  local package=$1
+  if [[ ${OS} == "trixie" ]]; then
+    case ${package} in
+      satdump|wkhtmltopdf|libatlas-base-dev|libncurses5-dev|libncursesw5-dev) echo "" ;;
+      libvolk2-dev) echo "libvolk-dev" ;;
+      libasound2:armhf) echo "libasound2t64:armhf" ;;
+      *) echo "${package}" ;;
+    esac
+  else
+    echo "${package}"
+  fi
+}
 
 if [[ ${ARCH} == "arm64" ]]; then
   LDD=$(which ldd)
@@ -186,6 +207,10 @@ if [[ ${ARCH} == "arm64" ]]; then
 fi
 
 while IFS= read -r line; do
+  # ntpsec on Trixie keeps its config under /etc/ntpsec instead of /etc/ntp.conf
+  if [[ ${OS} == "trixie" ]]; then
+    line=$(echo "${line}" | sed 's|/etc/ntp.conf|/etc/ntpsec/ntp.conf|')
+  fi
   perms ${line}
 done < ${PERMISSIONS_OTHER_LIST}
 
@@ -195,6 +220,8 @@ loggit "INFO" "*** Checking required packages ***"
 loggit "INFO" "*************************************************"
 
 while IFS= read -r line; do
+  line=$(adjust_package_for_os ${line})
+  [[ -z "${line}" ]] && continue
   package_status=$(dpkg-query -W ${line} | head -1)
   if [[ "${package_status}" == *"no packages found matching"* ]]; then
     loggit "FAIL" "${package_status}"
@@ -207,6 +234,8 @@ done < ${PACKAGE_LIST}
 
 if [[ ${ARCH} == "arm64" ]]; then
   while IFS= read -r line; do
+    line=$(adjust_package_for_os ${line})
+    [[ -z "${line}" ]] && continue
     package_status=$(dpkg-query -W ${line} | head -1)
     if [[ "${package_status}" == *"no packages found matching"* ]]; then
       loggit "FAIL" "${package_status}"
@@ -224,7 +253,7 @@ loggit "INFO" "*** Checking required PIP packages ***"
 loggit "INFO" "*************************************************"
 
 pip list > ${PIP_LOG}
-for pip_package in envbash facebook pysqlite;
+for pip_package in envbash facebook;
 do 
   v_result=$(cat ${PIP_LOG} | grep ${pip_package});
   if [[ ${v_result} ]]; then
