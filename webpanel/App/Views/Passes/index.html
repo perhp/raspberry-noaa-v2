@@ -6,6 +6,15 @@
 {% endblock %}
 
 {% block body %}
+  <div class="panel-label">
+    <h2>{{ lang.live_status|default('Live status') }}</h2>
+    <span class="rule"></span>
+  </div>
+  <div class="table-panel" style="padding: 12px 16px;">
+    <div id="live-status">{{ lang['no_capture_pass'] }}</div>
+    <pre id="live-log" style="display: none; margin: 8px 0 0; max-height: 200px; overflow: auto; font-size: 11px; white-space: pre-wrap;"></pre>
+  </div>
+
   {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
     <div class="panel-label">
       <h2>Instruments</h2>
@@ -130,6 +139,58 @@
       </tbody>
     </table>
   </div>
+
+  <script>
+    (function() {
+      var statusEl = document.getElementById('live-status');
+      var logEl = document.getElementById('live-log');
+      var stateLabels = {
+        capturing: "{{ lang['running_pass']|e('js') }}",
+        processing: "{{ lang['processing_pass']|e('js') }}"
+      };
+
+      function fmtTime(epoch) {
+        return new Date(epoch * 1000).toLocaleTimeString();
+      }
+
+      function fmtDelta(seconds) {
+        seconds = Math.max(0, seconds);
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        var s = seconds % 60;
+        var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+        return (h > 0 ? h + ':' + pad(m) : m) + ':' + pad(s);
+      }
+
+      function refresh() {
+        fetch('/passes/status').then(function(r) { return r.json(); }).then(function(d) {
+          if (d.current) {
+            var elapsed = d.server_time - d.current.pass_start;
+            statusEl.textContent = d.current.sat_name + ' — ' +
+              (stateLabels[d.current.status] || d.current.status) +
+              ' (' + fmtDelta(elapsed) + ', ' + d.current.max_elev + '°)';
+            if (d.log_tail && d.log_tail.length) {
+              logEl.style.display = 'block';
+              logEl.textContent = d.log_tail.join('\n');
+              logEl.scrollTop = logEl.scrollHeight;
+            }
+          } else if (d.next) {
+            var wait = d.next.pass_start - d.server_time;
+            statusEl.textContent = "{{ lang.next_pass_label|default('Next pass')|e('js') }}" + ': ' +
+              d.next.sat_name + ' @ ' + fmtTime(d.next.pass_start) +
+              ' (' + fmtDelta(wait) + ', ' + d.next.max_elev + '°)';
+            logEl.style.display = 'none';
+          } else {
+            statusEl.textContent = "{{ lang['no_capture_pass']|e('js') }}";
+            logEl.style.display = 'none';
+          }
+        }).catch(function() { /* transient poll errors are fine */ });
+      }
+
+      refresh();
+      setInterval(refresh, 10000);
+    })();
+  </script>
 
   {% if constant('Config\\Config::ENABLE_CORONAL_GIF') == 'true' %}
     <div class="panel-label">

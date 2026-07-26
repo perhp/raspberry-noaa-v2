@@ -62,6 +62,39 @@ class Pass extends \Lib\Model {
     $this->list = $passes;
   }
 
+  # get the pass currently being captured or processed, if any - restricted
+  # to recent rows so a stale status from a crashed script long ago cannot
+  # show up as an active capture
+  public function getCurrentCapture() {
+    $cutoff = time() - 7200;
+    $query = $this->db_conn->query("SELECT sat_name,
+                                           pass_start,
+                                           pass_end,
+                                           max_elev,
+                                           status
+                                    FROM predict_passes
+                                    WHERE status IN ('capturing', 'processing')
+                                      AND pass_start > $cutoff
+                                    ORDER BY pass_start DESC LIMIT 1;");
+    $row = $query->fetchArray(SQLITE3_ASSOC);
+    return $row === false ? null : $row;
+  }
+
+  # get the next scheduled pass, if any
+  public function getNextPass() {
+    $now = time();
+    $query = $this->db_conn->query("SELECT sat_name,
+                                           pass_start,
+                                           pass_end,
+                                           max_elev
+                                    FROM predict_passes
+                                    WHERE pass_start > $now
+                                      AND is_active = 1
+                                    ORDER BY pass_start ASC LIMIT 1;");
+    $row = $query->fetchArray(SQLITE3_ASSOC);
+    return $row === false ? null : $row;
+  }
+
   # get the 'at' job id for the pass having specified pass_start
   public function getATJobId($pass_start) {
     $query = $this->db_conn->prepare('SELECT at_job_id FROM predict_passes WHERE pass_start = ?;');

@@ -15,6 +15,8 @@ return array(
   "fail_delete_missing_id" => "Failed to delete - missing 'id' parameter",
   "gain" => "Gain",
   "image" => "Image",
+  "live_status" => "Live status",
+  "next_pass_label" => "Next pass",
   "images" => "Images",
   "max_elev" => "Max Elevation",
   "max_snr" => "Peak SNR",
