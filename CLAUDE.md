@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-raspberry-noaa-v2 (RN2) is a ground-station framework that captures and decodes NOAA APT and Meteor-M LRPT weather satellite imagery. It targets 64-bit Debian Bookworm (Raspberry Pi 3/4/5 or x64 PCs) and runs entirely on that device — the bash scripts, Ansible playbooks, and PHP webpanel are Linux-only and cannot be run/tested on Windows; development here is editing code that executes on the target machine.
+raspberry-noaa-v2 (RN2) is a ground-station framework that captures and decodes NOAA APT and Meteor-M LRPT weather satellite imagery. It targets 64-bit Debian Bookworm and Trixie (Raspberry Pi 3/4/5 or x64 PCs) and runs entirely on that device — the bash scripts, Ansible playbooks, and PHP webpanel are Linux-only and cannot be run/tested on Windows; development here is editing code that executes on the target machine.
 
 There is no build system, test suite, or linter. The scripts are plain bash/Python, and the webpanel is plain PHP.
 
@@ -39,4 +39,4 @@ Runtime log for capture events: `/var/log/raspberry-noaa-v2/output.log`.
 - Scripts refuse to run as root; the installer and all runtime scripts assume the repo is cloned at `~/raspberry-noaa-v2` under a username ≤ 9 characters (a `predict` limitation).
 - `predict` overflows on TLE paths deeper than one subdirectory — TLE files must stay in `tmp/`.
 - Satellite frequencies and binary paths are hardcoded in `scripts/common.sh`.
-- Only 64-bit Debian Bookworm-based OSes are supported (Bullseye support is sunset).
+- Only 64-bit Debian Bookworm- and Trixie-based OSes are supported (Bullseye support is sunset). Version-specific behavior is gated on `raspbian_version.stdout` in the Ansible tasks: Trixie uses native PHP 8.4 (no sury repo), builds SatDump from source (no upstream deb), renames libvolk2-dev→libvolk-dev / libasound2→libasound2t64 / libncurses5-dev→libncurses-dev, and has no wkhtmltopdf.

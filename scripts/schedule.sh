@@ -434,7 +434,9 @@ else
   log "Overlapping passes require manual selection" "INFO"
 fi
 
-if [[ "${ENABLE_EMAIL_SCHEDULE_PUSH:-false}" == "true" ]]; then
+if [[ "${ENABLE_EMAIL_SCHEDULE_PUSH:-false}" == "true" ]] && [[ ! -x "$WKHTMLTOIMG" ]]; then
+  log "wkhtmltoimage is not available (removed from Debian Trixie) - skipping schedule image email" "WARN"
+elif [[ "${ENABLE_EMAIL_SCHEDULE_PUSH:-false}" == "true" ]]; then
   annotation="Scheduled Passes | "
 
   if [[ -n "${GROUND_STATION_LOCATION:-}" ]]; then

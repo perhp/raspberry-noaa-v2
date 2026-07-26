@@ -66,7 +66,7 @@
       - php8.0-mbstring
       - php8.0-sqlite3
       - php7.4-intl
-  when: raspbian_version.stdout != 'bookworm'
+  when: raspbian_version.stdout not in ['bookworm', 'trixie']
 
 - name: install php (bookworm)
   become: yes
@@ -79,6 +79,19 @@
       - php8.2-sqlite3
       - php8.2-intl
   when: raspbian_version.stdout == 'bookworm'
+
+# Trixie ships PHP 8.4 natively - no sury.org repository needed
+- name: install php (trixie)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name:
+      - php8.4-fpm
+      - php8.4-mbstring
+      - php8.4-sqlite3
+      - php8.4-intl
+  when: raspbian_version.stdout == 'trixie'
 
 - name: install composer
   become: yes

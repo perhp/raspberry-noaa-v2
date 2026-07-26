@@ -17,7 +17,6 @@
       - airspy
       - hackrf
       - imagemagick
-      - wkhtmltopdf
       - jq
       - libgles-dev
       - libegl-dev
@@ -26,14 +25,11 @@
       - libgfortran5
       - libjpeg-dev
       - libtiff-dev
-      - libncurses5-dev
-      - libncursesw5-dev
       - libsox-fmt-mp3
       - libusb-1.0-0
       - libusb-1.0-0-dev
       - libxft-dev
       - libxft2
-      - libvolk2-dev
       - python3-setuptools
       - python3-idna
       - python3-jsonschema
@@ -60,6 +56,34 @@
       - libopencv-dev
       - python3-opencv
 
+# Package names that differ between Debian releases:
+# - wkhtmltopdf was removed from Debian Trixie (QtWebKit is gone); the email
+#   schedule image in scripts/schedule.sh degrades gracefully when it's missing
+# - libvolk2-dev (Bookworm) became libvolk-dev (Trixie)
+# - libncurses5-dev/libncursesw5-dev transitional packages were dropped in
+#   Trixie in favor of libncurses-dev
+- name: Installing version-specific dependencies (up to bookworm)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name:
+      - wkhtmltopdf
+      - libvolk2-dev
+      - libncurses5-dev
+      - libncursesw5-dev
+  when: raspbian_version.stdout != 'trixie'
+
+- name: Installing version-specific dependencies (trixie)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name:
+      - libvolk-dev
+      - libncurses-dev
+  when: raspbian_version.stdout == 'trixie'
+
 - name: Install required wxtoimg 32-bit dependencies (arm64)
   become: yes
   apt:
@@ -68,11 +92,29 @@
     name:
       - libc6:armhf
       - libstdc++6:armhf
-      - libasound2:armhf
       - libx11-6:armhf
       - libxft-dev:armhf
       - libxft2:armhf
   when: system_architecture == 'arm64'
+
+# ALSA runtime library was renamed in the Trixie time64 transition
+- name: Install wxtoimg 32-bit ALSA dependency (arm64, up to bookworm)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name:
+      - libasound2:armhf
+  when: system_architecture == 'arm64' and raspbian_version.stdout != 'trixie'
+
+- name: Install wxtoimg 32-bit ALSA dependency (arm64, trixie)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name:
+      - libasound2t64:armhf
+  when: system_architecture == 'arm64' and raspbian_version.stdout == 'trixie'
 
 #This was included because, for a period of time, SatDump didn't have dependencies included in the .deb file
 
@@ -164,7 +206,7 @@
 
 - name: Install required Python packages using pip3 since they aren't available among the apt packages
   command: pip3 install envbash==1.2.0 facebook-sdk==3.1.0 pysqlite3==0.5.1 --break-system-packages
-  when: raspbian_version.stdout == 'bookworm'
+  when: raspbian_version.stdout in ['bookworm', 'trixie']
 
 - name: Install required Python packages using pip3
   pip:
@@ -200,14 +242,90 @@
     update_cache: no
   when: system_architecture == 'arm64'
   
-# SatDump packages are only provided for 64-bit Bookworm (arm64/amd64),
-# the only supported targets
+# SatDump .deb packages are only provided for 64-bit Bookworm (arm64/amd64).
+# Upstream ships no Trixie package, so on Trixie SatDump is built from source
+# against the distro's volk 3.x / nng 1.10 below.
 - name: Installing SatDump
   become: yes
   apt:
     deb: "{{ noaa_home }}/software/satdump_1.2.2_bookworm_{{ system_architecture }}.deb"
     state: present
     update_cache: no
+  when: raspbian_version.stdout != 'trixie'
+
+- name: Install SatDump build dependencies (trixie)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name:
+      - git
+      - build-essential
+      - cmake
+      - g++
+      - pkgconf
+      - libfftw3-dev
+      - libpng-dev
+      - libtiff-dev
+      - libjemalloc-dev
+      - libcurl4-openssl-dev
+      - libvolk-dev
+      - libnng-dev
+      - libzstd-dev
+      - libomp-dev
+      - libglfw3-dev
+      - portaudio19-dev
+      - libhdf5-dev
+      - librtlsdr-dev
+      - libhackrf-dev
+      - libairspy-dev
+      - libairspyhf-dev
+      - ocl-icd-opencl-dev
+  when: raspbian_version.stdout == 'trixie'
+
+- name: Check if SatDump is already installed (trixie)
+  stat:
+    path: /usr/bin/satdump
+  register: satdump_bin
+  when: raspbian_version.stdout == 'trixie'
+
+- name: Clone SatDump sources (trixie)
+  git:
+    repo: https://github.com/SatDump/SatDump.git
+    dest: /tmp/satdump
+    version: "1.2.2"
+    depth: 1
+  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+
+- name: Create SatDump build directory (trixie)
+  file:
+    path: /tmp/satdump/build
+    state: directory
+    mode: 0755
+  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+
+- name: Generate SatDump build system (trixie)
+  command: cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ..
+  args:
+    chdir: /tmp/satdump/build
+    creates: /tmp/satdump/build/Makefile
+  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+
+# -j2 rather than nproc: satdump's C++ compile units are memory-hungry and
+# 4 parallel jobs can OOM a 4GB Raspberry Pi
+- name: Build SatDump - this takes a long time on a Raspberry Pi (trixie)
+  command: make -j2
+  args:
+    chdir: /tmp/satdump/build
+  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+
+- name: Install SatDump (trixie)
+  become: yes
+  command: make install
+  args:
+    chdir: /tmp/satdump/build
+    creates: /usr/bin/satdump
+  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
 
 - name: Create WXtoImg symbolic link for ARM64 architecture
   file:

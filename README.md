@@ -16,11 +16,13 @@ Finally, if you're looking for one of the cheapest ways to get started from an a
 
 # Announcements
 
+* 26.7.2026. Debian Trixie (13) support has been added, alongside the existing Bookworm support. On Trixie the webpanel runs on the distro's native PHP 8.4 (no third-party repository needed) and SatDump is built from source during install since upstream provides no Trixie package — expect the first install on a Raspberry Pi to take considerably longer. Note: the wkhtmltopdf tool was removed from Debian Trixie, so the optional "email an image of the pass schedule" feature is automatically skipped on Trixie.
+
 * 31.7.2024. We are sunsetting the legacy Debian Bullseye support for Raspberry Pi and x64 PCs. We have supported it for some time after the Bookworm support came out in May 2024. Thank you for using the raspberry-noaa-v2 project on these operating systems. New updates for SatDump and other features related to SatDump **will only be available for 64-bit Raspberry OS version Bookworm, and 64-bit Debian Bookworm-based Linux distributions for x64 PCs** as of now. If you'd like to continue receiving the new updates, we highly suggest you perform a full reinstallation of your operating system and conduct a fresh installation of raspberry-noaa-v2. It is possible to save previously received images before reinstalling the operating system by making a copy of `panel.db` file inside `~/raspberry-noaa-v2/db` directory and the whole `/srv` directory; restore these files after your new installation has finished. If you're satisfied with the current features available, you are free to use the system as-is. 
 
 # Raspberry NOAA (...and Meteor) V2
 
-NOAA and Meteor-M 2 satellite imagery capture setup for the regular 64-bit Debian Bookworm & Bullseye computers and 64-bit Raspberry OS version Bookworm!
+NOAA and Meteor-M 2 satellite imagery capture setup for regular 64-bit Debian Bookworm & Trixie computers and 64-bit Raspberry Pi OS versions Bookworm & Trixie!
 
 As of September 2023, raspberry-noaa-v2 officially works on any Debian-based distro! This project has been developed and tested on LMDE 6 "Faye" which is similar to the original Linux Mint, although the regular Mint is based on Ubuntu, while LMDE is based directly on Debian (Linux Mint Debian Edition). It can be downloaded from here: [https://mirrors.layeronline.com/linuxmint/debian/lmde-6-cinnamon-64bit.iso](https://mirrors.layeronline.com/linuxmint/debian/lmde-6-cinnamon-64bit.iso)
 
