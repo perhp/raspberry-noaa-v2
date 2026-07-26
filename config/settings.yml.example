@@ -224,6 +224,17 @@ disable_at_mail: false
 #   enable_matrix_push - whether to push images to a Matrix room
 #     * see docs/matrix_push.md for instructions
 
+# push quality gate - when enabled, social pushes (Discord, Telegram, email, etc.)
+# are skipped for weak passes so feeds don't fill up with noisy captures; everything
+# is still decoded, stored and shown in the webpanel, and the generic webhook still
+# fires for every capture
+#   push_min_max_elevation - only push passes whose max elevation reaches this many degrees
+#   push_min_snr - only push passes whose peak SNR (parsed from SatDump output, where
+#                  available) reaches this many dB - passes without SNR readings are not gated
+enable_push_quality_gate: false
+push_min_max_elevation: 0
+push_min_snr: 0
+
 # Whether you want to contribute to creation of community created Meteor and NOAA composites gathered from RN2 stations from all around the world
 # We do not collect any personal data
 # Thank you very much if you choose to contribute :)

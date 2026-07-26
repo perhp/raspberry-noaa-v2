@@ -431,6 +431,9 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
   capture_status="received"
   set_pass_status "received" ""
 
+  # skip social pushes for weak passes when the quality gate is enabled
+  apply_push_quality_gate
+
   # handle Pushover pushing if enabled
   if [ "${ENABLE_PUSHOVER_PUSH}" == "true" ]; then
     pushover_push_annotation=""

@@ -191,6 +191,13 @@
     "enable_webhook_push":        { "type": "boolean" },
     "webhook_push_url":           { "type": "string" },
     "webhook_push_auth_token":    { "type": "string" },
+    "enable_push_quality_gate":   { "type": "boolean" },
+    "push_min_max_elevation": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 90
+    },
+    "push_min_snr":               { "type": "number" },
     "enable_health_watchdog":     { "type": "boolean" },
     "watchdog_max_hours_without_capture": {
       "type": "number",
@@ -308,6 +315,9 @@
     "enable_webhook_push",
     "webhook_push_url",
     "webhook_push_auth_token",
+    "enable_push_quality_gate",
+    "push_min_max_elevation",
+    "push_min_snr",
     "enable_health_watchdog",
     "watchdog_max_hours_without_capture",
     "watchdog_disk_usage_threshold"]

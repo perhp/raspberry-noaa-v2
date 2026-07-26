@@ -67,6 +67,36 @@ extract_snr_stats() {
     | awk '{sum+=$1; n++; if(n==1 || $1>max) max=$1} END {if (n>0) printf "%.1f %.1f", max, sum/n}')"
 }
 
+# evaluate the social push quality gate and, when the capture fails it, turn
+# off the social push channels for the rest of this run so weak passes (low
+# elevation or poor SNR) don't get published; the generic webhook is exempt -
+# it is an integration event, not a publication - and everything still lands
+# in the local database and webpanel
+apply_push_quality_gate() {
+  [ "${ENABLE_PUSH_QUALITY_GATE}" != "true" ] && return 0
+
+  local reason=""
+  if [ "$(echo "${SAT_MAX_ELEVATION:-0} < ${PUSH_MIN_MAX_ELEVATION:-0}" | bc)" -eq 1 ]; then
+    reason="max elevation ${SAT_MAX_ELEVATION}° below ${PUSH_MIN_MAX_ELEVATION}°"
+  elif [ -n "$SNR_MAX" ] && [ "$(echo "${SNR_MAX} < ${PUSH_MIN_SNR:-0}" | bc)" -eq 1 ]; then
+    reason="peak SNR ${SNR_MAX} dB below ${PUSH_MIN_SNR} dB"
+  fi
+  [ -z "$reason" ] && return 0
+
+  log "Push quality gate: skipping social pushes for this pass (${reason})" "INFO"
+  ENABLE_EMAIL_PUSH=false
+  ENABLE_DISCORD_PUSH=false
+  ENABLE_TWITTER_PUSH=false
+  ENABLE_BLUESKY_PUSH=false
+  ENABLE_MASTODON_PUSH=false
+  ENABLE_FACEBOOK_PUSH=false
+  ENABLE_INSTAGRAM_PUSH=false
+  ENABLE_SLACK_PUSH=false
+  ENABLE_MATRIX_PUSH=false
+  ENABLE_PUSHOVER_PUSH=false
+  ENABLE_TELEGRAM_PUSH=false
+}
+
 # base directories for scripts
 SCRIPTS_DIR="${NOAA_HOME}/scripts"
 AUDIO_PROC_DIR="${SCRIPTS_DIR}/audio_processors"

@@ -329,6 +329,9 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
   capture_status="received"
   set_pass_status "received" ""
 
+  # skip social pushes for weak passes when the quality gate is enabled
+  apply_push_quality_gate
+
   # determine if auto-gain is set - handles "0" and "0.0" floats
   gain=$GAIN
   if [ $(echo "$GAIN==0"|bc) -eq 1 ]; then
