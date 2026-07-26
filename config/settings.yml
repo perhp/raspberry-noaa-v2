@@ -257,6 +257,10 @@ enable_satvis: true
 # thus they slow down the page & can lead to quite big data usage
 enable_coronal: false
 
+# whether to show the "Solar terminator" day/night world map
+# in the passes view
+enable_solar_terminator: true
+
 # whether to enable the image video in the passes view - note that this
 # is by default disabled on "extra-small" devices such as phones due
 # to the processing and space requirements

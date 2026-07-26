@@ -37,6 +37,9 @@ class Config {
   # warning: high data usage!
   const ENABLE_CORONAL_GIF = '{{ enable_coronal|lower }}';
 
+  # whether to show the solar terminator day/night world map
+  const ENABLE_SOLAR_TERMINATOR = '{{ enable_solar_terminator|default(true)|lower }}';
+
   # whether to enable image video
   const ENABLE_ANIMATION = '{{ enable_animation|lower }}';
   const ANIMATION_VIDEO_FILE = '{{ noaa_animation_output }}';

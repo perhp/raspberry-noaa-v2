@@ -188,6 +188,7 @@
     },
     "disable_at_mail":         { "type": "boolean" },
     "enable_satvis":           { "type": "boolean" },
+    "enable_solar_terminator": { "type": "boolean" },
     "enable_animation":        { "type": "boolean" },
     "delete_oldest_n":         { "type": "number" },
     "delete_older_than_n":     { "type": "number" },

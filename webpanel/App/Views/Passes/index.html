@@ -31,15 +31,17 @@
     </div>
   {% endif %}
 
-  <div class="panel-label">
-    <h2>Solar terminator</h2>
-    <span class="rule"></span>
-  </div>
-  <div class="instrument">
-    <div class="instrument-body">
-      <img src="https://www.timeanddate.com/scripts/sunmap.php?iso=&amp;earth=1" alt="Day and night across the Earth">
+  {% if constant('Config\\Config::ENABLE_SOLAR_TERMINATOR') == 'true' %}
+    <div class="panel-label">
+      <h2>Solar terminator</h2>
+      <span class="rule"></span>
     </div>
-  </div>
+    <div class="instrument">
+      <div class="instrument-body">
+        <img src="https://www.timeanddate.com/scripts/sunmap.php?iso=&amp;earth=1" alt="Day and night across the Earth">
+      </div>
+    </div>
+  {% endif %}
 
   <div class="panel-label">
     <h2>Pass schedule</h2>
