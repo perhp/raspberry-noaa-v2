@@ -58,6 +58,13 @@
     minute: 30
     job: "{{ noaa_home }}/scripts/tools/health_watchdog.sh"
 
+- name: create sky quality map cron job
+  cron:
+    name: regenerate reception quality sky map
+    minute: 40
+    hour: 0
+    job: "{{ noaa_home }}/scripts/tools/sky_quality_map.sh"
+
 - name: create database
   shell: "/usr/bin/sqlite3 {{ noaa_home }}/db/panel.db < {{ noaa_home }}/db_migrations/00_seed_schema.sql"
   args:

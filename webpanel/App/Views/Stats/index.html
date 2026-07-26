@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block body %}
+  <div class="panel-label">
+    <h2>{{ lang.sky_quality_map|default('Reception Quality Sky Map') }}</h2>
+    <span class="rule"></span>
+  </div>
+
+  {% if sky_map_exists %}
+    <p>{{ lang.sky_quality_map_help|default('Each point is the maximum-elevation position of a past pass, colored by the peak SNR SatDump reported. Clusters of weak or failed passes show where your horizon is obstructed.') }}</p>
+    <img src="/images/sky-quality-map.png?v={{ sky_map_mtime }}" alt="Reception quality sky map" style="max-width: 100%; height: auto;">
+  {% else %}
+    <p>{{ lang.sky_quality_map_missing|default('The sky map has not been generated yet - it is rebuilt nightly once passes have been captured, or run scripts/tools/sky_quality_map.sh manually.') }}</p>
+  {% endif %}
+{% endblock %}

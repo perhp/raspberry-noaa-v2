@@ -28,6 +28,7 @@
         <nav>
           <a{% if page == 'passes' %} class="active"{% endif %} href="/passes">{{ lang['passes'] }}</a>
           <a{% if page == 'captures' or page == 'capture' %} class="active"{% endif %} href="/captures?page_no=1">{{ lang['captures'] }}</a>
+          <a{% if page == 'stats' %} class="active"{% endif %} href="/stats">{{ lang.stats|default('Stats') }}</a>
           <a{% if page == 'admin' %} class="active"{% endif %} href="/admin/passes">{{ lang['admin'] }}</a>
         </nav>
         <div class="station-clock">
