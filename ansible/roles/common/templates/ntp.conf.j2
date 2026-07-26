@@ -4,7 +4,7 @@
 
 # /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
 
-driftfile /var/lib/ntp/ntp.drift
+driftfile {{ ntp_driftfile | default('/var/lib/ntp/ntp.drift') }}
 
 # Leap seconds definition provided by tzdata
 leapfile /usr/share/zoneinfo/leap-seconds.list

@@ -4,4 +4,10 @@
   service:
     name: ntp
     state: restarted
+
+- name: restart ntpsec
+  become: yes
+  service:
+    name: ntpsec
+    state: restarted
 ...

@@ -1,10 +1,22 @@
 ---
+# On Bookworm 'ntp' is a transitional package that installs ntpsec; Trixie
+# dropped the transitional name, so ntpsec is installed directly there and
+# uses its own config location and driftfile path.
 - name: install ntp
   become: yes
   apt:
     update_cache: no
     state: present
     name: ntp
+  when: raspbian_version.stdout != 'trixie'
+
+- name: install ntpsec (trixie)
+  become: yes
+  apt:
+    update_cache: no
+    state: present
+    name: ntpsec
+  when: raspbian_version.stdout == 'trixie'
 
 - name: Check if systemd-timesyncd service exists
   become: yes
@@ -29,4 +41,18 @@
     group: root
     mode: 0644
   notify: restart ntp
+  when: raspbian_version.stdout != 'trixie'
+
+- name: ntpsec config file (trixie)
+  become: yes
+  template:
+    src: ntp.conf.j2
+    dest: /etc/ntpsec/ntp.conf
+    owner: root
+    group: root
+    mode: 0644
+  vars:
+    ntp_driftfile: /var/lib/ntpsec/ntp.drift
+  notify: restart ntpsec
+  when: raspbian_version.stdout == 'trixie'
 ...
