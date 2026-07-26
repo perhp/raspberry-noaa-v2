@@ -231,6 +231,12 @@ pushover_link_url: "https://<url-to-webpanel>/captures/listImages"
 pushover_apitoken: ""
 pushover_user: ""
 pushover_prio: 0
+# enable_telegram_push - whether to push images to a Telegram chat via a bot
+#   telegram_bot_token - bot token from @BotFather
+#   telegram_chat_id - chat id of the target chat/channel (e.g. from @userinfobot or getUpdates)
+enable_telegram_push: false
+telegram_bot_token: ""
+telegram_chat_id: ""
 enable_twitter_push: false
 enable_bluesky_push: false
 enable_mastodon_push: false

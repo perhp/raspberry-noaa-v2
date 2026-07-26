@@ -184,7 +184,10 @@
     "pushover_link_url":          { "type": "string" },
     "pushover_apitoken":          { "type": "string" },
     "pushover_user":              { "type": "string" },
-    "pushover_prio":              { "type": "number" }
+    "pushover_prio":              { "type": "number" },
+    "enable_telegram_push":       { "type": "boolean" },
+    "telegram_bot_token":         { "type": "string" },
+    "telegram_chat_id":           { "type": "string" }
   },
   "required": [
     "latitude",
@@ -285,5 +288,8 @@
     "pushover_link_url",
     "pushover_apitoken",
     "pushover_user",
-    "pushover_prio"]
+    "pushover_prio",
+    "enable_telegram_push",
+    "telegram_bot_token",
+    "telegram_chat_id"]
 }
