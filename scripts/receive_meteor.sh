@@ -48,6 +48,18 @@ if ! [[ "$EPOCH_START" =~ ^[0-9]+$ ]] || ! [[ "$CAPTURE_TIME" =~ ^[0-9]+$ ]]; th
   exit 1
 fi
 
+# track the capture lifecycle in the database so the webpanel can distinguish
+# in-progress processing from a failed pass; the EXIT trap catches unexpected
+# deaths (config errors, crashes) so a pass never sticks in a running state
+capture_status="capturing"
+on_exit() {
+  if [ "$capture_status" == "capturing" ] || [ "$capture_status" == "processing" ]; then
+    set_pass_status "failed" "Script exited unexpectedly while ${capture_status} - check $NOAA_LOG"
+  fi
+}
+trap on_exit EXIT
+set_pass_status "capturing" ""
+
 # base directory plus filename_base for re-use
 RAMFS_AUDIO_BASE="${RAMFS_AUDIO}/${FILENAME_BASE}"
 AUDIO_FILE_BASE="${METEOR_AUDIO_OUTPUT}/${FILENAME_BASE}"
@@ -211,11 +223,15 @@ if [ $satdump_rc -ne 0 ]; then
   log "SatDump exited with code ${satdump_rc} (124 = watchdog timeout) - continuing with whatever was produced" "ERROR"
 fi
 
+cadu_produced=true
 if [ -f "$audio_temporary_storage_directory/meteor_m2-x_lrpt${mode}.cadu" ]; then
   mv "$audio_temporary_storage_directory/meteor_m2-x_lrpt${mode}.cadu" "${RAMFS_AUDIO_BASE}.cadu" >> $NOAA_LOG 2>&1
 else
+  cadu_produced=false
   log "SatDump did not produce a CADU file - capture likely failed (no signal, SDR busy or unplugged?)" "ERROR"
 fi
+capture_status="processing"
+set_pass_status "processing" ""
 
 log "Removing old bmp, gcp, and dat files" "INFO"
 find "$NOAA_HOME/tmp/meteor" -type f \( -name "*.gcp" -o -name "*.bmp" -o -name "*.dat" \) -mtime +1 -delete >> $NOAA_LOG 2>&1
@@ -491,6 +507,8 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
                       WHERE decoded_passes.id = $pass_id \
                     );" >> $NOAA_LOG 2>&1
 
+  capture_status="received"
+  set_pass_status "received" ""
 
   # handle Pushover pushing if enabled
   if [ "${ENABLE_PUSHOVER_PUSH}" == "true" ]; then
@@ -574,6 +592,16 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
   fi
 else
   log "No images found, not pushing anything" "INFO"
+  capture_status="failed"
+  if [ "$cadu_produced" == "false" ]; then
+    failure_reason="Recording produced no CADU data (no signal, SDR busy or unplugged?)"
+  else
+    failure_reason="Decoder produced no images from the recording - check $NOAA_LOG"
+  fi
+  if [ $satdump_rc -ne 0 ]; then
+    failure_reason="${failure_reason} (SatDump exit code ${satdump_rc}, 124 = watchdog timeout)"
+  fi
+  set_pass_status "failed" "$failure_reason"
 fi
 
 # calculate and report total time for capture

@@ -33,6 +33,18 @@ export SAT_MAX_ELEVATION=$6
 export PASS_DIRECTION=$7
 export PASS_SIDE=$8
 
+# track the capture lifecycle in the database so the webpanel can distinguish
+# in-progress processing from a failed pass; the EXIT trap catches unexpected
+# deaths (config errors, crashes) so a pass never sticks in a running state
+capture_status="capturing"
+on_exit() {
+  if [ "$capture_status" == "capturing" ] || [ "$capture_status" == "processing" ]; then
+    set_pass_status "failed" "Script exited unexpectedly while ${capture_status} - check $NOAA_LOG"
+  fi
+}
+trap on_exit EXIT
+set_pass_status "capturing" ""
+
 # export some variables for use in downstream processing scripts - note that we do not
 # want to export all of .noaa-v2.conf because it contains sensitive info
 if [ "$SAT_NAME" == "NOAA 15" ]; then
@@ -173,6 +185,14 @@ log "$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receive
 $SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav $finish_processing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
 rm "$audio_temporary_storage_directory/dataset.json" "$audio_temporary_storage_directory/product.cbor" >> $NOAA_LOG 2>&1
 log "Files recorded" "INFO"
+
+wav_produced=true
+if [ ! -s "$audio_temporary_storage_directory/noaa_apt.wav" ]; then
+  wav_produced=false
+  log "SatDump did not produce an audio recording - capture likely failed (no signal, SDR busy or unplugged?)" "ERROR"
+fi
+capture_status="processing"
+set_pass_status "processing" ""
 
 if [ "${CONTRIBUTE_TO_COMMUNITY_COMPOSITES}" == "true" ]; then
   log "Contributing images for creating community composites" "INFO"
@@ -416,6 +436,9 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
                       WHERE decoded_passes.id = $pass_id \
                     );" >> $NOAA_LOG 2>&1
 
+  capture_status="received"
+  set_pass_status "received" ""
+
   # determine if auto-gain is set - handles "0" and "0.0" floats
   gain=$GAIN
   if [ $(echo "$GAIN==0"|bc) -eq 1 ]; then
@@ -516,6 +539,12 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
 else
     # If no matching images are found, there is no need to push images
     log "No images found - not pushing anywhere" "INFO"
+    capture_status="failed"
+    if [ "$wav_produced" == "false" ]; then
+      set_pass_status "failed" "Recording produced no audio (no signal, SDR busy or unplugged?)"
+    else
+      set_pass_status "failed" "Decoder produced no images from the recording - check $NOAA_LOG"
+    fi
 fi
 
 # calculate and report total time for capture

@@ -20,6 +20,8 @@ return array(
   "next" => "Kitas",
   "next_pass" => "Laukiama",
   "no_capture_pass" => "Nepaviko ar vis dar vykdoma operacija",
+  "failed_pass" => "Įrašymas nepavyko",
+  "processing_pass" => "Įrašymas baigtas, apdorojami vaizdai...",
   "of" => "is",
   "page" => "Puslapis",
   "pass_end" => "Pabaiga",

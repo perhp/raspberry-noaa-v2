@@ -44,6 +44,19 @@ WKHTMLTOIMG="/usr/bin/wkhtmltoimage"
 METEORDEMOD="/usr/local/bin/meteordemod"
 SATDUMP="/usr/bin/satdump"
 
+# record capture lifecycle status ('capturing', 'processing', 'received',
+# 'failed') on the scheduled pass row so the webpanel can show real state
+# instead of inferring it from timestamps; non-fatal if the database predates
+# the status columns (the failed update only lands in the log)
+set_pass_status() {
+  local status=$1
+  local error_text=$2
+  [ -z "$EPOCH_START" ] && return 0
+  local safe_error=${error_text//"'"/"''"}
+  $SQLITE3 -cmd ".timeout 30000" "$DB_FILE" \
+    "UPDATE predict_passes SET status = '${status}', error_text = '${safe_error}' WHERE pass_start = $EPOCH_START;" >> "$NOAA_LOG" 2>&1
+}
+
 # base directories for scripts
 SCRIPTS_DIR="${NOAA_HOME}/scripts"
 AUDIO_PROC_DIR="${SCRIPTS_DIR}/audio_processors"

@@ -348,15 +348,24 @@ table.telemetry td.no-passes {
 
 .lamp-done    { border-color: rgba(94, 201, 138, 0.5);  color: var(--green); }
 .lamp-running { border-color: rgba(255, 180, 92, 0.6);  color: var(--amber); background: rgba(255, 180, 92, 0.12); }
+.lamp-processing { border-color: rgba(255, 180, 92, 0.6); color: var(--amber); }
 .lamp-next    { border-color: rgba(111, 176, 255, 0.5); color: var(--blue); }
 .lamp-conflict{ border-color: rgba(255, 107, 92, 0.6);  color: var(--red); }
+.lamp-failed  { border-color: rgba(255, 107, 92, 0.6);  color: var(--red); }
 .lamp-missed  { color: var(--faint); }
+
+/* keep failed passes legible even on dimmed (inactive) rows */
+table.telemetry tr.inactive .lamp-failed { opacity: 0.75; }
 
 @media (prefers-reduced-motion: no-preference) {
   .lamp-running { animation: lamp-pulse 2s ease-in-out infinite; }
   @keyframes lamp-pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 92, 0.35); }
     50%      { box-shadow: 0 0 0 5px rgba(255, 180, 92, 0); }
+  }
+  .lamp-processing svg { animation: lamp-spin 1.6s linear infinite; }
+  @keyframes lamp-spin {
+    to { transform: rotate(360deg); }
   }
 }
 

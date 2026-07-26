@@ -81,15 +81,23 @@
               {% set last_date = cur_date %}
             {% endif %}
 
-            <tr{% if pass.is_active == false or pass_end_ms < now_ms %} class="inactive"{% endif %}>
+            <tr{% if (pass.is_active == false or pass_end_ms < now_ms) and pass.status != 'capturing' and pass.status != 'processing' %} class="inactive"{% endif %}>
               <td class="center">
                 {% if pass.id %}
                   <span class="lamp lamp-done" title="{{ lang['completed_pass'] }}">
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7-8"/></svg>
                   </span>
+                {% elseif pass.status == 'failed' %}
+                  <span class="lamp lamp-failed" title="{{ lang['failed_pass'] }}{% if pass.error_text %}: {{ pass.error_text }}{% endif %}">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
+                  </span>
                 {% elseif now_ms > pass.pass_start and now_ms < pass.pass_end %}
                   <span class="lamp lamp-running" title="{{ lang['running_pass'] }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" fill="currentColor"/></svg>
+                  </span>
+                {% elseif pass.status == 'capturing' or pass.status == 'processing' %}
+                  <span class="lamp lamp-processing" title="{{ lang['processing_pass'] }}">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>
                   </span>
                 {% elseif prev_pass_end >= pass.pass_start %}
                   <span class="lamp lamp-conflict" title="{{ lang['conflicting_pass'] }}">

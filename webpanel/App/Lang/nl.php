@@ -20,6 +20,8 @@ return array(
   "next" => "Volgende",
   "next_pass" => "Wachten op de volgende pas",
   "no_capture_pass" => "Er wordt geen geldige opname of beeldverwerking uitgevoerd",
+  "failed_pass" => "Opname mislukt",
+  "processing_pass" => "Opname voltooid, beelden worden verwerkt...",
   "of" => "van",
   "page" => "Pagina",
   "pass_end" => "Einde passage",

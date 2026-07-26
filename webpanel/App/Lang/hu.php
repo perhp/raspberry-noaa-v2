@@ -20,6 +20,8 @@ return array(
   "next" => "Következő",
   "next_pass" => "Várom a következő bérletet",
   "no_capture_pass" => "Nincs folyamatban érvényes rögzítés vagy képfeldolgozás",
+  "failed_pass" => "Sikertelen rögzítés",
+  "processing_pass" => "Rögzítés kész, képek feldolgozása...",
   "of" => "közül",
   "page" => "oldal",
   "pass_end" => "Áthaladás vége",

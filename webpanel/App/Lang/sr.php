@@ -20,6 +20,8 @@ return array(
   "next" => "Sledeća",
   "next_pass" => "Čekam sledeći prelet",
   "no_capture_pass" => "Nema snimaka za ovaj prelet",
+  "failed_pass" => "Snimanje neuspešno",
+  "processing_pass" => "Snimanje završeno, obrada slika u toku...",
   "of" => "od",
   "page" => "Strana",
   "pass_end" => "Kraj",

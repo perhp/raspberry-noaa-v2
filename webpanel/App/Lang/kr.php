@@ -20,6 +20,8 @@ return array(
   "next" => "다음",
   "next_pass" => "다음 패스 대기 중",
   "no_capture_pass" => "유효한 캡처 또는 이미지 처리가 진행 중이 아님",
+  "failed_pass" => "캡처 실패",
+  "processing_pass" => "캡처 완료, 이미지 처리 중...",
   "of" => "/",
   "page" => "페이지",
   "pass_end" => "패스 종료",

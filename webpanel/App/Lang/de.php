@@ -20,6 +20,8 @@ return array(
   "next" => "Nächstes",
   "next_pass" => "Warten auf Überflug",
   "no_capture_pass" => "Keine Aufnahme vorhanden oder Umwandlung läuft",
+  "failed_pass" => "Aufnahme fehlgeschlagen",
+  "processing_pass" => "Aufnahme abgeschlossen, Bilder werden verarbeitet...",
   "of" => "von",
   "page" => "Seite",
   "pass_end" => "Ende des Überflugs",

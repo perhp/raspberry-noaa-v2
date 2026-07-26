@@ -20,6 +20,8 @@ return array(
   "next" => "下一页",
   "next_pass" => "等待下一次通过",
   "no_capture_pass" => "没有正在进行有效的捕获或图像处理",
+  "failed_pass" => "捕获失败",
+  "processing_pass" => "捕获完成，正在处理图像...",
   "of" => "共",
   "page" => "第",
   "pass_end" => "过境结束时间",

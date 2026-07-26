@@ -20,6 +20,8 @@ return array(
   "next" => "Suivant",
   "next_pass" => "En attendant le prochain passage",
   "no_capture_pass" => "Aucune capture valide ou traitement d'image en cours",
+  "failed_pass" => "Échec de la capture",
+  "processing_pass" => "Capture terminée, traitement des images...",
   "of" => "de",
   "page" => "Page",
   "pass_end" => "Fin du Passage",

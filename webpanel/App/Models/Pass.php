@@ -17,6 +17,8 @@ class Pass extends \Lib\Model {
                                            predict_passes.pass_start_azimuth,
                                            predict_passes.azimuth_at_max,
                                            predict_passes.direction,
+                                           predict_passes.status,
+                                           predict_passes.error_text,
                                            decoded_passes.id
                                     FROM predict_passes
                                     LEFT JOIN decoded_passes

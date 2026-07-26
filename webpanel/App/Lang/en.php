@@ -20,6 +20,8 @@ return array(
   "next" => "Next",
   "next_pass" => "Waiting for next pass",
   "no_capture_pass" => "No valid capture or image processing in progress",
+  "failed_pass" => "Capture failed",
+  "processing_pass" => "Capture complete, decoding images...",
   "of" => "of",
   "page" => "Page",
   "pass_end" => "Pass End",

@@ -20,6 +20,8 @@ return array(
   "next" => "Urmatorul",
   "next_pass" => "Asteptand urmatoarea trecere",
   "no_capture_pass" => "Nicio captura valida sau procesare a imaginii in curs",
+  "failed_pass" => "Captura esuata",
+  "processing_pass" => "Captura finalizata, procesare imagini...",
   "of" => "al",
   "page" => "Pagina",
   "pass_end" => "Trecere la sfarsit",
