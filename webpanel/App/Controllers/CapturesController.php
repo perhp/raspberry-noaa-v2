@@ -30,6 +30,7 @@ class CapturesController extends \Lib\Controller {
     $capture->getEnhancements($pass_id);
     $capture->getImagePath($pass_id);
     $capture->getGain($pass_id);
+    $capture->getSNR($pass_id);
 
     $args = array_merge($args, array('capture' => $capture));
 

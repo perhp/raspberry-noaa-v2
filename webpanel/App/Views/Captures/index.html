@@ -48,6 +48,11 @@
               {{ capture.gain }}
             {% endif %}
           </dd>
+
+          {% if capture.max_snr is not null and capture.max_snr != '' %}
+            <dt>{{ lang.max_snr|default('Peak SNR') }}</dt>
+            <dd>{{ capture.max_snr }} dB</dd>
+          {% endif %}
         </dl>
       </div>
     </div>

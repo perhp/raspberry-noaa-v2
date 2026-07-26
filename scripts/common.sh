@@ -54,6 +54,19 @@ set_pass_status() {
     "UPDATE predict_passes SET status = '${status}', error_text = '${safe_error}' WHERE pass_start = $EPOCH_START;" >> "$NOAA_LOG" 2>&1
 }
 
+# parse SatDump console output for demodulator SNR readings and set
+# SNR_MAX / SNR_AVG (empty when no readings were found, e.g. analog-only
+# pipelines or a dead capture) - values feed the decoded_passes quality columns
+extract_snr_stats() {
+  local satdump_log=$1
+  SNR_MAX=""
+  SNR_AVG=""
+  [ -f "$satdump_log" ] || return 0
+  read -r SNR_MAX SNR_AVG <<< "$(grep -oE 'SNR[^0-9,-]{0,10}-?[0-9]+(\.[0-9]+)?' "$satdump_log" \
+    | grep -oE '\-?[0-9]+(\.[0-9]+)?' \
+    | awk '{sum+=$1; n++; if(n==1 || $1>max) max=$1} END {if (n>0) printf "%.1f %.1f", max, sum/n}')"
+}
+
 # base directories for scripts
 SCRIPTS_DIR="${NOAA_HOME}/scripts"
 AUDIO_PROC_DIR="${SCRIPTS_DIR}/audio_processors"

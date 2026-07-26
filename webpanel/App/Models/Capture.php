@@ -9,6 +9,8 @@ class Capture extends \Lib\Model {
   public $start_epoch;
   public $travel_direction;
   public $gain;
+  public $max_snr;
+  public $avg_snr;
 
   # get a list of captures for the given page and total number
   # of configured images per page
@@ -19,6 +21,8 @@ class Capture extends \Lib\Model {
                                              daylight_pass,
                                              sat_type,
                                              gain,
+                                             max_snr,
+                                             avg_snr,
                                              predict_passes.sat_name,
                                              predict_passes.max_elev,
                                              predict_passes.pass_start_azimuth,
@@ -236,6 +240,18 @@ class Capture extends \Lib\Model {
     $image = $result->fetchArray();
 
     $this->gain = $image['gain'];
+  }
+
+  # get the SNR quality metrics for the specific capture (null for captures
+  # that predate the metrics or produced no demodulator readings)
+  public function getSNR($id) {
+    $query = $this->db_conn->prepare('SELECT max_snr, avg_snr FROM decoded_passes WHERE id = ?;');
+    $query->bindValue(1, $id);
+    $result = $query->execute();
+    $row = $result->fetchArray();
+
+    $this->max_snr = $row['max_snr'];
+    $this->avg_snr = $row['avg_snr'];
   }
 
   # get the epoch start time for the capture

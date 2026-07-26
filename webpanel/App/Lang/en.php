@@ -17,6 +17,8 @@ return array(
   "image" => "Image",
   "images" => "Images",
   "max_elev" => "Max Elevation",
+  "max_snr" => "Peak SNR",
+  "avg_snr" => "Avg SNR",
   "next" => "Next",
   "next_pass" => "Waiting for next pass",
   "no_capture_pass" => "No valid capture or image processing in progress",

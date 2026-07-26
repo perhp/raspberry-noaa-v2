@@ -176,9 +176,16 @@ daylight=$((SUN_ELEV > SUN_MIN_ELEV ? 1 : 0))
 log "Recording ${NOAA_HOME} via ${RECEIVER_TYPE} at ${freq} MHz via SatDump live pipeline" "INFO"
 audio_temporary_storage_directory="$(dirname "${RAMFS_FILE_BASE}")"
 log "$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav --finish_processing --timeout $CAPTURE_TIME" "INFO"
-$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav --finish_processing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
+# tee SatDump output to a per-pass file as well so demodulator SNR readings
+# can be parsed into the capture quality metrics after the pass
+satdump_pass_log="${RAMFS_AUDIO}/${FILENAME_BASE}-satdump.log"
+$SATDUMP live noaa_apt $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${NOAA_FREQUENCY}e6" --satellite_number ${SAT_NUMBER} --sdrpp_noise_reduction $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option $crop_topbottom --start_timestamp $PASS_START --save_wav --finish_processing --timeout $CAPTURE_TIME 2>&1 | tee "$satdump_pass_log" >> $NOAA_LOG
 rm "$audio_temporary_storage_directory/dataset.json" "$audio_temporary_storage_directory/product.cbor" >> $NOAA_LOG 2>&1
 log "Files recorded" "INFO"
+
+extract_snr_stats "$satdump_pass_log"
+rm -f "$satdump_pass_log"
+log "SNR readings for pass: max ${SNR_MAX:-n/a} dB, avg ${SNR_AVG:-n/a} dB" "INFO"
 
 wav_produced=true
 if [ ! -s "$audio_temporary_storage_directory/noaa_apt.wav" ]; then
@@ -300,10 +307,10 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
     ${IMAGE_PROC_DIR}/thumbnail.sh 300 "${IMAGE_FILE_BASE}-polar-direction.png" "${IMAGE_THUMB_BASE}-polar-direction.png" >> $NOAA_LOG 2>&1
   fi
 
-  $SQLITE3 $DB_FILE "INSERT OR REPLACE INTO decoded_passes (id, pass_start, file_path, daylight_pass, sat_type, has_spectrogram, has_pristine, has_polar_az_el, has_polar_direction, has_histogram, gain) \
+  $SQLITE3 $DB_FILE "INSERT OR REPLACE INTO decoded_passes (id, pass_start, file_path, daylight_pass, sat_type, has_spectrogram, has_pristine, has_polar_az_el, has_polar_direction, has_histogram, gain, max_snr, avg_snr) \
                                       VALUES ( \
                                         (SELECT id FROM decoded_passes WHERE pass_start = $EPOCH_START), \
-                                        $EPOCH_START, \"$FILENAME_BASE\", $daylight, 1, $spectrogram, $pristine, $polar_az_el, $polar_direction, $histogram, $GAIN \
+                                        $EPOCH_START, \"$FILENAME_BASE\", $daylight, 1, $spectrogram, $pristine, $polar_az_el, $polar_direction, $histogram, $GAIN, ${SNR_MAX:-NULL}, ${SNR_AVG:-NULL} \
                                       );" >> $NOAA_LOG 2>&1
 
   pass_id=$($SQLITE3 $DB_FILE "SELECT id FROM decoded_passes ORDER BY id DESC LIMIT 1;") >> $NOAA_LOG 2>&1

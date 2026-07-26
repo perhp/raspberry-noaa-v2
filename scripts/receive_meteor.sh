@@ -205,12 +205,19 @@ audio_temporary_storage_directory="$(dirname "${RAMFS_FILE_BASE}")"
 log "$SATDUMP live meteor_m2-x_lrpt${mode} $audio_temporary_storage_directory --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency ${METEOR_FREQUENCY}e6 $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option --finish_processing --fill_missing --timeout $CAPTURE_TIME" "INFO"
 # wrap SatDump in a watchdog timeout so a hung SDR/capture cannot block the
 # scheduler forever and eat subsequent passes - allow generous extra time
-# beyond the capture itself for --finish_processing to decode the images
-timeout --kill-after=60 $((CAPTURE_TIME + 900)) $SATDUMP live meteor_m2-x_lrpt${mode} "$audio_temporary_storage_directory" --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${METEOR_FREQUENCY}e6" $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option --finish_processing --fill_missing --timeout $CAPTURE_TIME >> $NOAA_LOG 2>&1
-satdump_rc=$?
+# beyond the capture itself for --finish_processing to decode the images;
+# tee the output to a per-pass file as well so demodulator SNR readings can
+# be parsed into the capture quality metrics after the pass
+satdump_pass_log="${RAMFS_AUDIO}/${FILENAME_BASE}-satdump.log"
+timeout --kill-after=60 $((CAPTURE_TIME + 900)) $SATDUMP live meteor_m2-x_lrpt${mode} "$audio_temporary_storage_directory" --source $receiver --samplerate $samplerate $ppm_correction ${FREQ_OFFSET} --frequency "${METEOR_FREQUENCY}e6" $sdr_id_option $SDR_DEVICE_ID $gain_option $GAIN $bias_tee_option --finish_processing --fill_missing --timeout $CAPTURE_TIME 2>&1 | tee "$satdump_pass_log" >> $NOAA_LOG
+satdump_rc=${PIPESTATUS[0]}
 if [ $satdump_rc -ne 0 ]; then
   log "SatDump exited with code ${satdump_rc} (124 = watchdog timeout) - continuing with whatever was produced" "ERROR"
 fi
+
+extract_snr_stats "$satdump_pass_log"
+rm -f "$satdump_pass_log"
+log "SNR readings for pass: max ${SNR_MAX:-n/a} dB, avg ${SNR_AVG:-n/a} dB" "INFO"
 
 cadu_produced=true
 if [ -f "$audio_temporary_storage_directory/meteor_m2-x_lrpt${mode}.cadu" ]; then
@@ -406,8 +413,8 @@ if [ -n "$(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "$(basename "$IMAGE_
 
   # insert or replace in case there was already an insert due to the spectrogram creation
   # (use a busy timeout on all database access so a webpanel read can't fail the insert)
-  $SQLITE3 -cmd ".timeout 30000" $DB_FILE "INSERT OR REPLACE INTO decoded_passes (pass_start, file_path, daylight_pass, sat_type, has_spectrogram, has_polar_az_el, has_polar_direction, gain) \
-                                      VALUES ($EPOCH_START, \"$FILENAME_BASE\", $daylight, 0, $spectrogram, $polar_az_el, $polar_direction, ${GAIN:-0});" >> $NOAA_LOG 2>&1
+  $SQLITE3 -cmd ".timeout 30000" $DB_FILE "INSERT OR REPLACE INTO decoded_passes (pass_start, file_path, daylight_pass, sat_type, has_spectrogram, has_polar_az_el, has_polar_direction, gain, max_snr, avg_snr) \
+                                      VALUES ($EPOCH_START, \"$FILENAME_BASE\", $daylight, 0, $spectrogram, $polar_az_el, $polar_direction, ${GAIN:-0}, ${SNR_MAX:-NULL}, ${SNR_AVG:-NULL});" >> $NOAA_LOG 2>&1
 
   pass_id=$($SQLITE3 -cmd ".timeout 30000" $DB_FILE "SELECT id FROM decoded_passes ORDER BY id DESC LIMIT 1;")
   $SQLITE3 -cmd ".timeout 30000" $DB_FILE "UPDATE predict_passes \
