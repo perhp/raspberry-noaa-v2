@@ -11,10 +11,38 @@ class Capture extends \Lib\Model {
   public $gain;
   public $max_snr;
   public $avg_snr;
+  public $sat_list;
+
+  # build the WHERE clause for the gallery filters (satellite, day/night,
+  # minimum elevation) - values are bound as named parameters by bindFilters
+  private function filterClause($filters) {
+    $clauses = [];
+    if (!empty($filters['sat'])) {
+      $clauses[] = 'predict_passes.sat_name = :sat';
+    }
+    if (isset($filters['daynight']) && $filters['daynight'] === 'day') {
+      $clauses[] = 'decoded_passes.daylight_pass = 1';
+    } elseif (isset($filters['daynight']) && $filters['daynight'] === 'night') {
+      $clauses[] = 'decoded_passes.daylight_pass = 0';
+    }
+    if (!empty($filters['min_elev'])) {
+      $clauses[] = 'predict_passes.max_elev >= :min_elev';
+    }
+    return count($clauses) > 0 ? ' WHERE ' . implode(' AND ', $clauses) : '';
+  }
+
+  private function bindFilters($query, $filters) {
+    if (!empty($filters['sat'])) {
+      $query->bindValue(':sat', $filters['sat']);
+    }
+    if (!empty($filters['min_elev'])) {
+      $query->bindValue(':min_elev', (int)$filters['min_elev']);
+    }
+  }
 
   # get a list of captures for the given page and total number
-  # of configured images per page
-  public function getList($page, $img_per_page) {
+  # of configured images per page, restricted by the optional gallery filters
+  public function getList($page, $img_per_page, $filters = []) {
     $query = $this->db_conn->prepare("SELECT decoded_passes.id,
                                              predict_passes.pass_start,
                                              file_path,
@@ -30,10 +58,12 @@ class Capture extends \Lib\Model {
                                              predict_passes.azimuth_at_max
                                              FROM decoded_passes
                                              INNER JOIN predict_passes
-                                               ON predict_passes.pass_start = decoded_passes.pass_start
-                                             ORDER BY decoded_passes.pass_start DESC LIMIT ? OFFSET ?;");
-    $query->bindValue(1, $img_per_page);
-    $query->bindValue(2, $img_per_page * ($page-1));
+                                               ON predict_passes.pass_start = decoded_passes.pass_start"
+                                             . $this->filterClause($filters) .
+                                             " ORDER BY decoded_passes.pass_start DESC LIMIT :limit OFFSET :offset;");
+    $this->bindFilters($query, $filters);
+    $query->bindValue(':limit', $img_per_page);
+    $query->bindValue(':offset', $img_per_page * ($page-1));
     $result = $query->execute();
 
     $captures = [];
@@ -47,10 +77,31 @@ class Capture extends \Lib\Model {
   }
 
   # get total number of pages to display images given the
-  # passed number of images per page
-  public function totalPages($images_per_page) {
-    $decoded_passes = $this->db_conn->querySingle("SELECT count() FROM decoded_passes;");
-    return ceil($decoded_passes/$images_per_page);
+  # passed number of images per page and the optional gallery filters
+  public function totalPages($images_per_page, $filters = []) {
+    $query = $this->db_conn->prepare("SELECT count() FROM decoded_passes
+                                      INNER JOIN predict_passes
+                                        ON predict_passes.pass_start = decoded_passes.pass_start"
+                                      . $this->filterClause($filters) . ";");
+    $this->bindFilters($query, $filters);
+    $result = $query->execute();
+    $row = $result->fetchArray();
+    return ceil($row[0]/$images_per_page);
+  }
+
+  # get the distinct satellite names present in the capture history, for
+  # the gallery filter dropdown
+  public function getSatList() {
+    $query = $this->db_conn->query("SELECT DISTINCT predict_passes.sat_name
+                                    FROM decoded_passes
+                                    INNER JOIN predict_passes
+                                      ON predict_passes.pass_start = decoded_passes.pass_start
+                                    ORDER BY predict_passes.sat_name;");
+    $sats = [];
+    while ($row = $query->fetchArray()) {
+      $sats[] = $row['sat_name'];
+    }
+    $this->sat_list = $sats;
   }
 
   # get the enhancements for the particular capture

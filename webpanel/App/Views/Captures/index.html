@@ -1,6 +1,41 @@
 {% extends "base.html" %}
 
 {% block body %}
+<form method="get" action="/captures" class="table-panel" style="padding: 10px 16px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+  <input type="hidden" name="page_no" value="1">
+
+  <label style="font-size: 0.85rem;">{{ lang['satellite'] }}
+    <select name="sat">
+      <option value="">{{ lang.filter_all|default('All') }}</option>
+      {% for sat in capture.sat_list %}
+        <option value="{{ sat }}"{% if filters.sat == sat %} selected{% endif %}>{{ sat }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label style="font-size: 0.85rem;">{{ lang.filter_daynight|default('Day/Night') }}
+    <select name="daynight">
+      <option value="">{{ lang.filter_all|default('All') }}</option>
+      <option value="day"{% if filters.daynight == 'day' %} selected{% endif %}>{{ lang.filter_day|default('Day') }}</option>
+      <option value="night"{% if filters.daynight == 'night' %} selected{% endif %}>{{ lang.filter_night|default('Night') }}</option>
+    </select>
+  </label>
+
+  <label style="font-size: 0.85rem;">{{ lang['max_elev'] }}
+    <select name="min_elev">
+      <option value="">{{ lang.filter_all|default('All') }}</option>
+      {% for elev in [20, 40, 60, 80] %}
+        <option value="{{ elev }}"{% if filters.min_elev == elev %} selected{% endif %}>&ge; {{ elev }}&#176;</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <button type="submit" class="page-btn">{{ lang.filter_apply|default('Filter') }}</button>
+  {% if filter_qs != '' %}
+    <a class="page-btn" href="/captures?page_no=1">{{ lang.filter_clear|default('Clear') }}</a>
+  {% endif %}
+</form>
+
 {% include('Captures/pagination.html') %}
 
 <div class="capture-grid">

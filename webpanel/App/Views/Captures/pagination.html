@@ -2,7 +2,7 @@
   {% if cur_page <= 1 %}
     <span class="page-btn" aria-disabled="true">&laquo; {{ lang['prev'] }}</span>
   {% else %}
-    <a class="page-btn" href="{{ "?page_no=#{cur_page-1}" }}" aria-label="{{ lang['prev'] }}">&laquo; {{ lang['prev'] }}</a>
+    <a class="page-btn" href="{{ "?page_no=#{cur_page-1}#{filter_qs|default('')}" }}" aria-label="{{ lang['prev'] }}">&laquo; {{ lang['prev'] }}</a>
   {% endif %}
 
   <span class="page-pos">{{ "#{lang['page']} #{cur_page} #{lang['of']} #{page_count}" }}</span>
@@ -10,6 +10,6 @@
   {% if cur_page >= page_count %}
     <span class="page-btn" aria-disabled="true">{{ lang['next'] }} &raquo;</span>
   {% else %}
-    <a class="page-btn" href="{{ "?page_no=#{cur_page+1}" }}" aria-label="{{ lang['next'] }}">{{ lang['next'] }} &raquo;</a>
+    <a class="page-btn" href="{{ "?page_no=#{cur_page+1}#{filter_qs|default('')}" }}" aria-label="{{ lang['next'] }}">{{ lang['next'] }} &raquo;</a>
   {% endif %}
 </nav>

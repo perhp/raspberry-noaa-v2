@@ -2,6 +2,84 @@
 
 {% block body %}
   <div class="panel-label">
+    <h2>{{ lang.station_totals|default('Station Totals') }}</h2>
+    <span class="rule"></span>
+  </div>
+  <div class="table-panel" style="padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 2.5rem;">
+    <div>
+      <div style="font-size: 1.6rem; font-family: var(--font-display);">{{ stat.totals.total_captures }}</div>
+      <div style="color: var(--dim); font-size: 0.8rem;">{{ lang.total_captures|default('Total captures') }}</div>
+    </div>
+    <div>
+      <div style="font-size: 1.6rem; font-family: var(--font-display);">{{ stat.totals.attempted_30d }}</div>
+      <div style="color: var(--dim); font-size: 0.8rem;">{{ lang.passes_30d|default('Passes attempted, last 30 days') }}</div>
+    </div>
+    <div>
+      <div style="font-size: 1.6rem; font-family: var(--font-display);">
+        {% if stat.totals.success_rate_30d is not null %}{{ stat.totals.success_rate_30d }}%{% else %}&mdash;{% endif %}
+      </div>
+      <div style="color: var(--dim); font-size: 0.8rem;">{{ lang.success_rate_30d|default('Success rate, last 30 days') }}</div>
+    </div>
+  </div>
+
+  <div class="panel-label">
+    <h2>{{ lang.captures_per_day|default('Captures per Day') }}</h2>
+    <span class="rule"></span>
+    <span class="label-aux">{{ lang.last_30_days|default('Last 30 days') }}</span>
+  </div>
+  <div class="table-panel" style="padding: 12px 16px;">
+    {% if stat.per_day|length > 0 %}
+      {% for row in stat.per_day %}
+        <div style="display: flex; align-items: center; gap: 10px; margin: 3px 0;"
+             title="{{ row.day }}: {{ row.captures }}">
+          <span class="num" style="width: 6.5rem; font-size: 0.75rem; color: var(--dim);">{{ row.day }}</span>
+          <span style="flex: 1; display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; height: 10px; border-radius: 0 4px 4px 0; background: var(--blue); width: {{ ((row.captures / stat.max_per_day) * 100)|round }}%;"></span>
+            <span class="num" style="font-size: 0.75rem; color: var(--dim);">{{ row.captures }}</span>
+          </span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="color: var(--dim);">{{ lang.no_captures_yet|default('No captures in the last 30 days.') }}</p>
+    {% endif %}
+  </div>
+
+  <div class="panel-label">
+    <h2>{{ lang.per_satellite|default('Per Satellite') }}</h2>
+    <span class="rule"></span>
+  </div>
+  <div class="table-panel">
+    <table class="telemetry">
+      <thead>
+        <tr>
+          <th>{{ lang['satellite'] }}</th>
+          <th class="center">{{ lang['captures'] }}</th>
+          <th class="center">{{ lang.avg_elev|default('Avg Elevation') }}</th>
+          <th class="center">{{ lang.avg_snr|default('Avg SNR') }}</th>
+          <th class="center">{{ lang.best_snr|default('Best SNR') }}</th>
+          <th class="center hide-sm">{{ lang.last_capture|default('Last Capture') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in stat.per_satellite %}
+          <tr>
+            <td>{{ row.sat_name }}</td>
+            <td class="center num">{{ row.captures }}</td>
+            <td class="center num">{{ row.avg_elev }}&#176;</td>
+            <td class="center num">{% if row.avg_snr is not null %}{{ row.avg_snr }} dB{% else %}&mdash;{% endif %}</td>
+            <td class="center num">{% if row.best_snr is not null %}{{ row.best_snr }} dB{% else %}&mdash;{% endif %}</td>
+            <td class="center num hide-sm">{{ row.last_capture|date(constant('Config\\Config::DATETIME_FORMAT')) }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="no-passes">{{ lang.no_captures_yet|default('No captures yet.') }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel-label">
     <h2>{{ lang.sky_quality_map|default('Reception Quality Sky Map') }}</h2>
     <span class="rule"></span>
   </div>
