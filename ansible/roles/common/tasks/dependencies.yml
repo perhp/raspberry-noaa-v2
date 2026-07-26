@@ -5,212 +5,54 @@
     update_cache: yes
     state: present
     name:
-      - python3-pip
-      - wget
-      - curl
-      - build-essential
+      - airspy
       - at
       - bc
+      - build-essential
+      - certbot
       - cmake
-      - ffmpeg
-      - gmic
-      - airspy
+      - curl
+      - git
       - hackrf
       - imagemagick
       - jq
-      - libgles-dev
-      - libegl-dev
-      - libopenblas-dev
-      - libgfortran5
-      - libjpeg-dev
-      - libtiff-dev
-      - libsox-fmt-mp3
       - libusb-1.0-0
       - libusb-1.0-0-dev
-      - libxft-dev
-      - libxft2
-      - python3-setuptools
-      - python3-venv
-      - python3-idna
+      - pkg-config
+      - python3-ephem
       - python3-jsonschema
       - python3-matplotlib
       - python3-numpy
-      - python3-pil # this is really pillow
-      - python3-yaml
+      - python3-pip
       - python3-requests
-      - python3-urllib3
-      - python3-ephem
-      - socat
+      - python3-venv
+      - python3-yaml
       - sox
       - sqlite3
-      - certbot
-      - zlib1g-dev
-      - libsqlite3-dev
-      - python3-dev
-      - cmake
-      - build-essential
-      - pkg-config
-      - git
-      - liblapacke-dev
-      - gfortran
-      - libopencv-dev
-      - python3-opencv
-
-# Package names that differ between Debian releases:
-# - wkhtmltopdf was removed from Debian Trixie (QtWebKit is gone); the email
-#   schedule image in scripts/schedule.sh degrades gracefully when it's missing
-# - libvolk2-dev (Bookworm) became libvolk-dev (Trixie)
-# - libncurses5-dev/libncursesw5-dev transitional packages were dropped in
-#   Trixie in favor of libncurses-dev
-# - libatlas-base-dev (ATLAS) was removed from Trixie; libopenblas-dev in the
-#   general list covers BLAS/LAPACK there
-- name: Installing version-specific dependencies (up to bookworm)
-  become: yes
-  apt:
-    update_cache: no
-    state: present
-    name:
-      - wkhtmltopdf
-      - libvolk2-dev
-      - libncurses5-dev
-      - libncursesw5-dev
-      - libatlas-base-dev
-  when: raspbian_version.stdout != 'trixie'
-
-- name: Installing version-specific dependencies (trixie)
-  become: yes
-  apt:
-    update_cache: no
-    state: present
-    name:
-      - libvolk-dev
-      - libncurses-dev
-  when: raspbian_version.stdout == 'trixie'
-
-#This was included because, for a period of time, SatDump didn't have dependencies included in the .deb file
-
-#- name: Installing SatDump dependencies part 1
-#  become: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - git
-#      - build-essential
-#      - cmake
-#      - g++
-#      - pkgconf
-#      - libfftw3-dev
-#      - libvolk2-dev
-#      - libpng-dev 
-#
-#- name: Installing SatDump dependencies part 2
-#  become: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - libnng-dev
-#
-#- name: Installing SatDump dependencies part 3
-#  become: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - librtlsdr-dev
-#      - libhackrf-dev
-#      - libairspy-dev
-#      - libairspyhf-dev
-#
-#- name: Installing SatDump dependencies part 4
-#  become: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - libglfw3-dev
-#
-#- name: Installing SatDump dependencies part 5
-#  become: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - libzstd-dev
-#
-#- name: Installing SatDump dependencies part 6 (ignore if error, this dependency is optional)
-#  become: yes
-#  ignore_errors: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - libomp-dev
-#
-#- name: Installing SatDump dependencies part 7 (ignore if error, this dependency is optional)
-#  become: yes
-#  ignore_errors: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - ocl-icd-opencl-dev
-#
-#- name: Installing SatDump dependencies part 8 (ignore if error, this dependency is optional)
-#  become: yes
-#  ignore_errors: yes
-#  apt:
-#    update_cache: yes
-#    state: present
-#    name:
-#      - intel-opencl-icd
-
-#- name: Install required Python packages using pip3
-#  pip:
-#    name:
-#      - envbash==1.2.0
-#      - facebook-sdk==3.1.0
-#      - pysqlite3==0.5.1
-#    state: present
-#    executable: pip3
+      - wget
 
 # The RN2 virtualenv is created with system site-packages so the apt-installed
 # Python modules (numpy, matplotlib, ephem, ...) remain importable; only the
 # packages unavailable via apt are pip-installed into it. Runtime scripts use
-# it through the PYTHON variable rendered into ~/.noaa-v2.conf.
-# (pysqlite3 was dropped from this list: nothing in the repo imports it - the
-# Python scripts use the stdlib sqlite3 module - and 0.5.1 no longer compiles
-# against Python 3.13 on Trixie)
+# it through the PYTHON variable rendered into ~/.noaa-v2.conf. Push-processor
+# libraries (tweepy, facebook-sdk, ...) are added to the same virtualenv by
+# social_media.yml when their push option is enabled.
 - name: Install pip-only Python packages into the RN2 virtualenv
   pip:
     name:
       - envbash==1.2.0
-      - facebook-sdk==3.1.0
     state: present
     virtualenv: /home/{{ target_user }}/.rn2_venv
     virtualenv_command: /usr/bin/python3 -m venv --system-site-packages
 
-# SatDump .deb packages are only provided for 64-bit Bookworm (arm64/amd64).
-# Upstream ships no Trixie package, so on Trixie SatDump is built from source
-# against the distro's volk 3.x / nng 1.10 below.
-- name: Installing SatDump
-  become: yes
-  apt:
-    deb: "{{ noaa_home }}/software/satdump_1.2.2_bookworm_{{ system_architecture }}.deb"
-    state: present
-    update_cache: no
-  when: raspbian_version.stdout != 'trixie'
-
-- name: Install SatDump build dependencies (trixie)
+# SatDump ships no Trixie package upstream, so it is built from source against
+# the distro's volk 3.x / nng 1.10
+- name: Install SatDump build dependencies
   become: yes
   apt:
     update_cache: no
     state: present
     name:
-      - git
-      - build-essential
-      - cmake
       - g++
       - pkgconf
       - libfftw3-dev
@@ -223,6 +65,8 @@
       - libzstd-dev
       - libomp-dev
       - libglfw3-dev
+      - libgles-dev
+      - libegl-dev
       - portaudio19-dev
       - libhdf5-dev
       - librtlsdr-dev
@@ -230,64 +74,53 @@
       - libairspy-dev
       - libairspyhf-dev
       - ocl-icd-opencl-dev
-  when: raspbian_version.stdout == 'trixie'
 
-- name: Check if SatDump is already installed (trixie)
+- name: Check if SatDump is already installed
   stat:
     path: /usr/bin/satdump
   register: satdump_bin
-  when: raspbian_version.stdout == 'trixie'
 
-- name: Clone SatDump sources (trixie)
+- name: Clone SatDump sources
   git:
     repo: https://github.com/SatDump/SatDump.git
     dest: /tmp/satdump
     version: "1.2.2"
     depth: 1
-  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+  when: not satdump_bin.stat.exists
 
-- name: Create SatDump build directory (trixie)
+- name: Create SatDump build directory
   file:
     path: /tmp/satdump/build
     state: directory
     mode: 0755
-  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+  when: not satdump_bin.stat.exists
 
-- name: Generate SatDump build system (trixie)
+- name: Generate SatDump build system
   command: cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ..
   args:
     chdir: /tmp/satdump/build
     creates: /tmp/satdump/build/Makefile
-  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+  when: not satdump_bin.stat.exists
 
 # -j2 rather than nproc: satdump's C++ compile units are memory-hungry and
 # 4 parallel jobs can OOM a 4GB Raspberry Pi
-- name: Build SatDump - this takes a long time on a Raspberry Pi (trixie)
+- name: Build SatDump - this takes a long time on a Raspberry Pi
   command: make -j2
   args:
     chdir: /tmp/satdump/build
-  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+  when: not satdump_bin.stat.exists
 
-- name: Install SatDump (trixie)
+- name: Install SatDump
   become: yes
   command: make install
   args:
     chdir: /tmp/satdump/build
     creates: /usr/bin/satdump
-  when: raspbian_version.stdout == 'trixie' and not satdump_bin.stat.exists
+  when: not satdump_bin.stat.exists
 
-#- name: Installing MeteorDemod
-#  become: yes
-#  apt:
-#    deb: "https://github.com/Digitelektro/MeteorDemod/releases/download/2.5.6-beta/meteordemod_2.5.6_{{ system_architecture }}.deb"
-#    state: present
-#    update_cache: no
-
-# OS Lite versions do not have .config, but when its created as as part of the .config/meteordemod task below 
-# The .config ownership of top directory is root:root 755 when this happens and it needs to be target_user:target_user 700
-#
-# This problem does not occur on OS Full installations
-
+# OS Lite versions do not have .config, but when it is created by the SatDump
+# config task the ownership of the top directory ends up root:root - it needs
+# to be target_user:target_user 700
 - name: .config directory ownership
   become: yes
   file:
@@ -296,109 +129,4 @@
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
     mode: 0700
-
-- name: Check if MeteorDemod is installed
-  stat:
-    path: /usr/local/bin/meteordemod
-  register: meteor_demod_installed
-  changed_when: false
-
-- name: Clone MeteorDemod repository if not installed
-  git:
-    repo: https://github.com/Digitelektro/MeteorDemod.git
-    dest: /home/{{ target_user }}/MeteorDemod
-    version: origin/master
-    depth: 1
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-  ignore_errors: yes
-
-- name: Update MeteorDemod submodules
-  command: git submodule update --init --recursive
-  args:
-    chdir: /home/{{ target_user }}/MeteorDemod
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-# Upstream MeteorDemod is missing <cstdint> includes that gcc 14 (Trixie) no
-# longer provides transitively - uint32_t fails to resolve without these.
-# lineinfile is idempotent, so this is a no-op once upstream fixes it.
-- name: Patch MeteorDemod agc.h for gcc 14 (missing cstdint include)
-  lineinfile:
-    path: /home/{{ target_user }}/MeteorDemod/DSP/agc.h
-    insertafter: '^#include <complex>'
-    line: '#include <cstdint>'
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Patch MeteorDemod iqsource.h for gcc 14 (missing cstdint include)
-  lineinfile:
-    path: /home/{{ target_user }}/MeteorDemod/DSP/iqsource.h
-    insertafter: '^#define IQSOURCE_H'
-    line: '#include <cstdint>'
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Create build directory
-  file:
-    path: /home/{{ target_user }}/MeteorDemod/build
-    state: directory
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Build MeteorDemod
-  command: cmake ../
-  args:
-    chdir: /home/{{ target_user }}/MeteorDemod/build
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Configure the OpenCV library path
-  become: yes
-  command: ldconfig
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Make MeteorDemod
-  command: make -j3
-  args:
-    chdir: /home/{{ target_user }}/MeteorDemod/build
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Install MeteorDemod
-  become: yes
-  command: make install
-  args:
-    chdir: /home/{{ target_user }}/MeteorDemod/build
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Set ownership of configuration directory
-  become: yes
-  file:
-    path: /home/{{ target_user }}/.config/meteordemod
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    recurse: yes
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-- name: Clean up
-  file:
-    path: /home/{{ target_user }}/MeteorDemod
-    state: absent
-  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
-
-# - name: Check if libbrcmGLESV2.50 link exists
-#   stat:
-#     path: /usr/lib/libbrcmGLESV2.50
-#   register: libGLESV2_link
-#   ignore_errors: yes
-
-# - name: Create symbolic link for libGLESV2.so
-#   command: ln -s /usr/lib/arm-linux-gnueabihf/libGLESV2.so /usr/lib/libbrcmGLESV2.50
-#   become: yes
-#   when: not libGLESV2_link.stat.exists and system_architecture == 'armhf'
-
-# - name: Check if libbrcmEGL.so link exists
-#   stat:
-#     path: /usr/lib/libbrcmEGL.so
-#   register: libEGL_link
-#   ignore_errors: yes
-
-# - name: Create symbolic link for libEGL.so
-#   command: ln -s /usr/lib/arm-linux-gnueabihf/libEGL.so /usr/lib/libbrcmEGL.so
-#   become: yes
-#   when: not libEGL_link.stat.exists and system_architecture == 'armhf'
 ...

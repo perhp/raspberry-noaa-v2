@@ -176,6 +176,6 @@ if [ $install_type == 'install' ]; then
   log_running "Reloading udev rules and trigger so correct permissions fire for SDR Dongles"
   sudo udevadm control --reload-rules && sudo udevadm trigger
   log_running "Running RN2 Verification Tool..."
-  ${HOME}/raspberry-noaa-v2/scripts/tools/verification_tool/verification.sh quick
+  ${HOME}/raspberry-noaa-v2/scripts/tools/verification_tool/verification.sh
   sudo reboot
 fi

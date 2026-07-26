@@ -56,30 +56,6 @@
     executable: /bin/bash
     creates: "{{ noaa_home }}/db/panel.db"
 
-- name: create map directory
-  file:
-    path: "{{ noaa_home }}/tmp/map"
-    state: directory
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: 0755
-
-- name: create meteor directory
-  file:
-    path: "{{ noaa_home }}/tmp/meteor"
-    state: directory
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: 0755
-
-- name: create scanner directory
-  file:
-    path: "{{ noaa_home }}/tmp/scanner"
-    state: directory
-    owner: "{{ target_user }}"
-    group: "{{ target_user }}"
-    mode: 0755
-
 - name: create images directory
   become: yes
   file:
@@ -121,13 +97,5 @@
     state: directory
     owner: "{{ target_user }}"
     group: "{{ target_user }}"
-    mode: 0775
-
-- name: create videos directory
-  become: yes
-  file:
-    path: "{{ videos_output }}"
-    state: directory
-    owner: "{{ target_user }}"
     mode: 0775
 ...

@@ -31,14 +31,8 @@ fi
 
 # binary helpers
 CONVERT="/usr/bin/convert"
-FFMPEG="/usr/bin/ffmpeg"
 SOX="/usr/bin/sox"
-GMIC="/usr/bin/gmic"
-IDENTIFY="/usr/bin/identify"
-RTL_FM="/usr/local/bin/rtl_fm"
 SQLITE3="/usr/bin/sqlite3"
-WKHTMLTOIMG="/usr/bin/wkhtmltoimage"
-METEORDEMOD="/usr/local/bin/meteordemod"
 SATDUMP="/usr/bin/satdump"
 
 # Python interpreter - ~/.noaa-v2.conf points this at the RN2 virtualenv,
@@ -72,7 +66,6 @@ METEOR_M2_4_FREQ="137.9000"
 NOAA15_FREQ="137.6200"
 NOAA18_FREQ="137.9125"
 NOAA19_FREQ="137.1000"
-ELEKTRO_L3_FREQ="1691.0000"
 
 # current date and time
 export START_DATE=$(date '+%d-%m-%Y %H:%M')

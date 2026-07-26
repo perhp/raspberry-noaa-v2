@@ -16,15 +16,15 @@ Finally, if you're looking for one of the cheapest ways to get started from an a
 
 # Announcements
 
+* 26.7.2026. The project has been slimmed down considerably: SatDump is now the only decoder for both NOAA and Meteor captures (the legacy wxtoimg and MeteorDemod decoders were removed along with their settings and dependencies), pass prediction is done natively in Python (the old `predict` binary is gone, and with it the 9-character username limit), Python packages are installed into a dedicated virtualenv (`~/.rn2_venv`), and **Debian Trixie (13) is now the only supported OS** - Bookworm and Bullseye support has been removed. SatDump is always built from source during install, so expect the first install on a Raspberry Pi to take a while.
+
 * 26.7.2026. Debian Trixie (13) support has been added, alongside the existing Bookworm support. On Trixie the webpanel runs on the distro's native PHP 8.4 (no third-party repository needed) and SatDump is built from source during install since upstream provides no Trixie package — expect the first install on a Raspberry Pi to take considerably longer. Note: the wkhtmltopdf tool was removed from Debian Trixie, so the optional "email an image of the pass schedule" feature is automatically skipped on Trixie.
 
 * 31.7.2024. We are sunsetting the legacy Debian Bullseye support for Raspberry Pi and x64 PCs. We have supported it for some time after the Bookworm support came out in May 2024. Thank you for using the raspberry-noaa-v2 project on these operating systems. New updates for SatDump and other features related to SatDump **will only be available for 64-bit Raspberry OS version Bookworm, and 64-bit Debian Bookworm-based Linux distributions for x64 PCs** as of now. If you'd like to continue receiving the new updates, we highly suggest you perform a full reinstallation of your operating system and conduct a fresh installation of raspberry-noaa-v2. It is possible to save previously received images before reinstalling the operating system by making a copy of `panel.db` file inside `~/raspberry-noaa-v2/db` directory and the whole `/srv` directory; restore these files after your new installation has finished. If you're satisfied with the current features available, you are free to use the system as-is. 
 
 # Raspberry NOAA (...and Meteor) V2
 
-NOAA and Meteor-M 2 satellite imagery capture setup for regular 64-bit Debian Bookworm & Trixie computers and 64-bit Raspberry Pi OS versions Bookworm & Trixie!
-
-As of September 2023, raspberry-noaa-v2 officially works on any Debian-based distro! This project has been developed and tested on LMDE 6 "Faye" which is similar to the original Linux Mint, although the regular Mint is based on Ubuntu, while LMDE is based directly on Debian (Linux Mint Debian Edition). It can be downloaded from here: [https://mirrors.layeronline.com/linuxmint/debian/lmde-6-cinnamon-64bit.iso](https://mirrors.layeronline.com/linuxmint/debian/lmde-6-cinnamon-64bit.iso)
+NOAA and Meteor-M 2 satellite imagery capture setup for regular 64-bit Debian Trixie computers and 64-bit Raspberry Pi OS Trixie!
 
 See "Credits" for the awesome way this version of the framework came to be.
 
@@ -92,15 +92,7 @@ Also, check out [THIS LINK](docs/webpanel_screenshots.md) for some screen shots 
 
 ## Compatibility
 
-**NOTE: ONLY 32-bit OS is supported : Recommended is 'Bookworm' Release.**
-
-The original raspberry-noaa was tested on Raspberry Pi 2 and up. However, while this compatibility may have been maintained
-with raspberry-noaa-v2, ~~this version was developed and tested on a Raspberry Pi 4 - it has not been exhaustively tested on other variants
-of Raspberry Pi (but if you get it working on a version, please do submit a PR and mention it so this document can be updated!).~~, this version works on Pi 3, Pi 4 and Pi 5, and the variants of these models. If you can install 64 bit Debian Bookworm or Bullseye, it will probably work.
-
-As of September 2023, raspberry-noaa-v2 can also be installed on regular 64-bit computers running **ANY** Debian Bookworm-based distro. ~~It has been developed and tested on LMDE 6 "Faye" which I also recommend for users coming from Windows, as it has many similarities. It can be downloaded here: [https://mirrors.layeronline.com/linuxmint/debian/lmde-6-cinnamon-64bit.iso](https://mirrors.layeronline.com/linuxmint/debian/lmde-6-cinnamon-64bit.iso)~~ After providing Bookworm support, the recommended version for PCs running RN2 is plain old Debian Bookworm. Desktop environment (like Gnome, KDE, Cinammon, XFCE...) doesn't matter, it only has to be 64-bit Debian.
-
-If you test with another OS - again, please submit a PR and let us know how it works out!
+**Only 64-bit Debian Trixie (13) based systems are supported** - the installer refuses to run on anything else. This version works on Pi 3, Pi 4 and Pi 5 (and the variants of these models) running 64-bit Raspberry Pi OS Trixie, as well as regular x64 PCs running any Debian Trixie based distro. Desktop environment (Gnome, KDE, Cinnamon, XFCE...) doesn't matter, it only has to be 64-bit Debian Trixie.
 
 If you're interested in the details behind the original raspberry-noaa hardware compatibility tests, see the [hardware](docs/hardware.md)
 document.
@@ -121,7 +113,7 @@ patching, and even then it would still be questionable), updating your Pi user p
 
 ## Install
 
-To install the product, and get going if you're using 64 64-bit Debian Bookworm-based computer, you first need to stop sudo from asking to enter a password. It will ensure all commands are handled well, and that our project can access superuser privileges for certain things like moving files around in the audio and image directory etc.
+To install the product, and get going if you're using a 64-bit Debian Trixie based computer, you first need to stop sudo from asking to enter a password. It will ensure all commands are handled well, and that our project can access superuser privileges for certain things like moving files around in the audio and image directory etc.
 
 To achieve this, run:
 
@@ -223,22 +215,14 @@ output file in `/var/log/raspberry-noaa-v2/output.log` to investigate potential 
 
 The verification tool can be used to help identify RN2 installation/configuration issues which may potentially prevent proper functioning of capture/decode/processing of APT telemetry data.
 
-Execute the verification script by passing the required argument [ quick | full ]
+Execute the verification script (takes about a minute):
 
-  $HOME/raspberry-noaa-v2/scripts/tools/verification_tool/verification.sh quick
-
-  Argument required:  ./verification.sh quick    or    ./verification.sh full
-                        (~ 1 minute)                       (~ 5 minutes)
+  $HOME/raspberry-noaa-v2/scripts/tools/verification_tool/verification.sh
 
    Dryrun of binaries includes executing :
 
-    nxing web page returned 200 OK status to confirm Web Portal is up.
+    nginx web page returned 200 OK status to confirm Web Portal is up.
     satdump live capture for 1 second to ensure it runs without error.
-    meteordemod -h is executed to ensure it runs without error.
-
-   When FULL mode is choosen meterdemod fully decodes a staged cadu file :
-
-    meteordemod generates a full set of images which can be found :  $HOME/raspberry-noaa-v2/scripts/tools/verification_tool/test_files/tmp
 
 Still having problems? You can email MihajloPi at mihajlo.raspberrypi@gmail.com and be sure to send him the log so he can debug the errors!
 

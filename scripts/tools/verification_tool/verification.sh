@@ -2,39 +2,15 @@
 #
 # Purpose: The purpose of this verification script is to attempt to verify the RN2 environment
 #          is installed and configured correctly. It checks permissions, file/directory ownership,
-#          group permissions, package dependencies are met, key programs like satdump and
-#          meteordemod are linked and execute without error during a dry run.
+#          group permissions, package dependencies are met, and that the key programs (satdump,
+#          nginx) are linked and execute without error during a dry run.
 #
 # Author:  Richard Creasey (AI4Y)
 #
 # Created: July 15th, 2024
-
-# Input parameters:
-#
-#   1. Input mode  [quick|full]
 #
 # Example:
-#         ./verification.sh quick
-#         ./verification.sh full
-
-# input params
-MODE=$1
-
-echo ""
-if [[ -z ${MODE} ]]; then
-  echo "Argument required:  ./verification.sh quick    or    ./verification.sh full"
-  echo "                        (~ 1 minute)                       (~ 5 minutes)"
-  echo ""
-  exit 1
-else
-  vMODE=$(echo ${MODE} | tr '[:lower:]' '[:upper:]')
-  if [[ ${vMODE} != "QUICK" && ${vMODE} != "FULL" ]]; then
-    echo "Argument required:  ./verification.sh quick    or    ./verification.sh full"
-    echo "                        (~ 1 minute)                       (~ 5 minutes)"
-    echo ""
-    exit 1
-  fi
-fi
+#         ./verification.sh
 
 start=$(date +%s)
 
@@ -55,8 +31,6 @@ VALIDATION_LOG=/var/log/raspberry-noaa-v2/verification.log
 PERMISSIONS_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/permissions.list
 PERMISSIONS_OTHER_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/permissions_other.list
 PACKAGE_LIST=/home/$USER/raspberry-noaa-v2/scripts/tools/verification_tool/config/package.list
-TEST_FILES=$HOME/raspberry-noaa-v2/scripts/tools/verification_tool/test_files
-mkdir -p -m 755 ${TEST_FILES}/tmp
 declare -A levels=([PASS]=1 [FAIL]=2 [INFO]=3)
 log_level=${LOG_LEVEL}
 FAILURES=0
@@ -65,28 +39,8 @@ echo "" > $VALIDATION_LOG
 
 TEST_LOG=/tmp/verficiation_test.log
 PIP_LOG=/tmp/pip_installed.log
-ARCH=$(dpkg --print-architecture)
-OS=$(cat /etc/os-release | grep -E "^DEBIAN_CODENAME|^VERSION_CODENAME" | awk -F"=" '{print $NF}' | sort | head -1)
 BIN_SCRIPT=/tmp/verficiation_test.sh
 LDD=$(which ldd)
-
-# Translate or skip package names that differ on Trixie:
-# - satdump is built from source there (no dpkg entry; validated by dry run)
-# - wkhtmltopdf was removed from Debian Trixie (optional feature, auto-skipped)
-# - libvolk2-dev/libncurses5-dev/libncursesw5-dev/libatlas-base-dev were
-#   replaced by libvolk-dev/libncurses-dev/libopenblas-dev
-adjust_package_for_os() {
-  local package=$1
-  if [[ ${OS} == "trixie" ]]; then
-    case ${package} in
-      satdump|wkhtmltopdf|libatlas-base-dev|libncurses5-dev|libncursesw5-dev) echo "" ;;
-      libvolk2-dev) echo "libvolk-dev" ;;
-      *) echo "${package}" ;;
-    esac
-  else
-    echo "${package}"
-  fi
-}
 
 # loggit function
 loggit() {
@@ -107,43 +61,27 @@ perms() {
   localuser=$USER
 
   ptype=$1
-  #echo "ptype=${ptype}"
   if [[ "${ptype}" == "file" ]]; then
     ptype="regular file"
-  elif [[ "${ptype}" == "symbolic" ]]; then 
+  elif [[ "${ptype}" == "symbolic" ]]; then
     ptype="symbolic link"
   fi
 
   rperms=$2
   owner=$3
-  #echo "owner=${owner}"
   if [[ "${owner}" == "\$USER" ]]; then
-    #echo "Setting owner, current owner=${owner}, USER=${USER}, localuser=${localuser}"
     owner=$localuser
-  #  echo "owner=${owner}"
   fi
 
   group=$4
-  #echo "group=${group}"
   if [[ "${group}" == "\$USER" ]]; then
     group=$localuser
-  #  echo "group=${group}"
   fi
 
   path=$5
-  #echo "path=${path}"
   if [[ "${path}" == *"\$USER"* ]]; then
     path=$(echo ${path} | sed  -e "s/\$USER/${localuser}/g")
-  #  echo "path=${path}"
   fi
-  
-  #echo "-----------------"
-  #echo "ptype=${ptype}"
-  #echo "rperms=${rperms}"
-  #echo "owner=${owner}"
-  #echo "group=${group}"
-  #echo "path=${path}"
-  #echo "-----------------"
 
   if [[ -e $path ]]; then
     status=$(stat -c "%F %a %U %G %n" ${path})
@@ -190,10 +128,6 @@ while IFS= read -r line; do
 done < ${PERMISSIONS_LIST}
 
 while IFS= read -r line; do
-  # ntpsec on Trixie keeps its config under /etc/ntpsec instead of /etc/ntp.conf
-  if [[ ${OS} == "trixie" ]]; then
-    line=$(echo "${line}" | sed 's|/etc/ntp.conf|/etc/ntpsec/ntp.conf|')
-  fi
   perms ${line}
 done < ${PERMISSIONS_OTHER_LIST}
 
@@ -203,8 +137,6 @@ loggit "INFO" "*** Checking required packages ***"
 loggit "INFO" "*************************************************"
 
 while IFS= read -r line; do
-  line=$(adjust_package_for_os ${line})
-  [[ -z "${line}" ]] && continue
   package_status=$(dpkg-query -W ${line} | head -1)
   if [[ "${package_status}" == *"no packages found matching"* ]]; then
     loggit "FAIL" "${package_status}"
@@ -221,8 +153,8 @@ loggit "INFO" "*** Checking required PIP packages ***"
 loggit "INFO" "*************************************************"
 
 $HOME/.rn2_venv/bin/pip list > ${PIP_LOG}
-for pip_package in envbash facebook;
-do 
+for pip_package in envbash;
+do
   v_result=$(cat ${PIP_LOG} | grep ${pip_package});
   if [[ ${v_result} ]]; then
     loggit "PASS" "${v_result}"
@@ -267,11 +199,7 @@ NGINX_CMD="curl -s --head --request GET http://0.0.0.0/passes | grep '200 OK'"
 SATDUMP="/usr/bin/satdump"
 SATDUMP_CMD="${SATDUMP} live noaa_apt . --source rtlsdr --samplerate 1.024e6 --frequency 137.9125e6 --satellite_number 18 --fill_missing --sdrpp_noise_reduction --gain 49.6 --timeout 1"
 
-METEORDEMOD="/usr/local/bin/meteordemod"
-METEORDEMOD_QCMD="${METEORDEMOD} -h"
-METEORDEMOD_CMD="${METEORDEMOD} -m oqpsk -diff 1 -s 72000 -sat 'METEOR-M-2-3' -t '${TEST_FILES}/meteordemod-input.tle' -f jpg -i '${TEST_FILES}/meteordemod-input.cadu' -o '${TEST_FILES}/tmp'"
-
-for BIN in ${NGINX} ${SATDUMP} ${METEORDEMOD} ;
+for BIN in ${NGINX} ${SATDUMP} ;
 do
   BINNAME=$(echo ${BIN} | awk -F"/" '{print $NF}' | tr '[:lower:]' '[:upper:]')
   BINCMD="${BINNAME}_CMD"
@@ -286,48 +214,21 @@ do
     #
     # Writing test command to a file to call for execution so quoted arguments pass correctly
     echo ${!BINCMD} > ${BIN_SCRIPT};chmod +x ${BIN_SCRIPT}
-    if [[ ${BINNAME} == 'METEORDEMOD' && ${vMODE} == "FULL" ]]; then
-      loggit "INFO" "*** FULL mode choosen *** - Please wait for meteordemod testing to complete... ~ 4 minutes"
-      ${BIN_SCRIPT} >> ${TEST_LOG} 2>&1
-      vResult=$?
-      if (( ${vResult} )); then
-        vError=$(cat ${TEST_LOG} | tail -1)
-        loggit "FAIL" "${BIN} dry run failed: ${vError}"
-        FAILURES=$(expr ${FAILURES} + 1)
-      else
-        loggit "PASS" "${BIN} dry run was successful"
-        PASSES=$(expr ${PASSES} + 1)
-      fi
-    elif [[ ${BINNAME} != 'METEORDEMOD' ]]; then
-      ${BIN_SCRIPT} >> ${TEST_LOG} 2>&1
-      vResult=$?
-      if (( ${vResult} )); then
-        vError=$(cat ${TEST_LOG} | tail -1)
-        loggit "FAIL" "${BIN} dry run failed: ${vError}"
-        FAILURES=$(expr ${FAILURES} + 1)
-      else
-        loggit "PASS" "${BIN} dry run was successful"
-        PASSES=$(expr ${PASSES} + 1)
-      fi
-    elif [[ ${BINNAME} == 'METEORDEMOD' ]]; then
-      BINCMD="${BINNAME}_QCMD"
-      echo ${!BINCMD} > ${BIN_SCRIPT};chmod +x ${BIN_SCRIPT}
-      ${BIN_SCRIPT} >> ${TEST_LOG} 2>&1
-      vResult=$?
-      if (( ${vResult} )); then
-        vError=$(cat ${TEST_LOG} | tail -1)
-        loggit "FAIL" "${BIN} dry run failed: ${vError}"
-        FAILURES=$(expr ${FAILURES} + 1)
-      else
-        loggit "PASS" "${BIN} dry run was successful"
-        PASSES=$(expr ${PASSES} + 1)
-      fi
+    ${BIN_SCRIPT} >> ${TEST_LOG} 2>&1
+    vResult=$?
+    if (( ${vResult} )); then
+      vError=$(cat ${TEST_LOG} | tail -1)
+      loggit "FAIL" "${BIN} dry run failed: ${vError}"
+      FAILURES=$(expr ${FAILURES} + 1)
+    else
+      loggit "PASS" "${BIN} dry run was successful"
+      PASSES=$(expr ${PASSES} + 1)
     fi
   else
     loggit "FAIL" "${BIN} is missing ${v_lddresult} required librarie(s)"
     FAILURES=$(expr ${FAILURES} + 1)
     loggit "FAIL" "${BIN} skipping dry run execution due to missing librarie(s)"
-    FAILURES=$(expr ${FAILURES} + 1)    
+    FAILURES=$(expr ${FAILURES} + 1)
   fi
 
 done
@@ -346,7 +247,7 @@ loggit "INFO" "************** Ending Validation ****************"
 ##################################################
 
 if [[ -f  ${BIN_SCRIPT} ]]; then
-  \rm -f ${BIN_SCRIPT} ${PIP_LOG} raw_*.png product.cbor dataset.json APT-*.png ${TEST_FILES}/tmp/*.bmp ${TEST_FILES}/tmp/*.dat 2>/dev/null
+  \rm -f ${BIN_SCRIPT} ${PIP_LOG} raw_*.png product.cbor dataset.json APT-*.png 2>/dev/null
 fi
 
 secs_to_human "$(($(date +%s) - ${start}))"

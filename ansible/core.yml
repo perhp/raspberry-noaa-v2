@@ -9,6 +9,11 @@
       register: raspbian_version
       check_mode: no
       changed_when: no
+
+    - name: verify this is a Debian Trixie based system
+      assert:
+        that: raspbian_version.stdout == 'trixie'
+        fail_msg: "raspberry-noaa-v2 supports only Debian Trixie based systems (detected: '{{ raspbian_version.stdout }}')"
   roles:
     - role: common
 ...

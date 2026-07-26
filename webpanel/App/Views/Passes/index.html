@@ -6,28 +6,18 @@
 {% endblock %}
 
 {% block body %}
-  {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' or constant('Config\\Config::ENABLE_ANIMATION') == 'true' %}
+  {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
     <div class="panel-label">
       <h2>Instruments</h2>
       <span class="rule"></span>
       <span class="label-aux">{{ constant('Config\\Config::BASE_STATION_LAT') }}, {{ constant('Config\\Config::BASE_STATION_LON') }}</span>
     </div>
     <div class="instrument-grid hide-sm">
-      {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
-        <div class="instrument" id="satvis">
-          <div class="instrument-body">
-            <iframe name="satvis" title="Orbital track" src="https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&tags=Weather"></iframe>
-          </div>
+      <div class="instrument" id="satvis">
+        <div class="instrument-body">
+          <iframe name="satvis" title="Orbital track" src="https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&tags=Weather"></iframe>
         </div>
-      {% endif %}
-
-      {% if constant('Config\\Config::ENABLE_ANIMATION') == 'true' %}
-        <div class="instrument" id="noaa-animation">
-          <div class="instrument-body">
-            <video playsinline autoplay muted loop controls src="{{ constant('Config\\Config::ANIMATION_VIDEO_FILE') }}" type="video/webm, codecs=vp9"></video>
-          </div>
-        </div>
-      {% endif %}
+      </div>
     </div>
   {% endif %}
 

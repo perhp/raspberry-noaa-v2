@@ -11,14 +11,10 @@ db_file: "{{ noaa_home }}/db/panel.db"
 # website content directory
 web_home: "/var/www/wx-new"
 
-# output root directories for images, audio, and video
+# output root directories for images and audio
 output_root: /srv
 images_output: "{{ output_root }}/images"
 audio_output: "{{ output_root }}/audio"
-videos_output: "{{ output_root }}/videos"
-
-# file used for NOAA animations
-noaa_animation_output: "{{ videos_output }}/RollingAnimation.webm"
 
 # ramfs location
 ramfs_path: "/var/ramfs"

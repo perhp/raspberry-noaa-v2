@@ -100,13 +100,17 @@ backup() {
           exit 1
         fi
 
-        loggit "INFO" "Backing up /srv/videos, please wait..."
-        cp -pr /srv/videos ${BACKUP_LOC}/srv/videos
-        if [[ $? -eq 0 ]]; then
-          loggit "PASS" "Successfully backed up /srv/videos"
-        else
-          loggit "FAIL" "Failed to backup /srv/videos, aborting..."
-          exit 1
+        # /srv/videos only exists on installs that predate the removal of the
+        # animation feature - back it up when present, skip quietly otherwise
+        if [[ -d /srv/videos ]]; then
+          loggit "INFO" "Backing up /srv/videos, please wait..."
+          cp -pr /srv/videos ${BACKUP_LOC}/srv/videos
+          if [[ $? -eq 0 ]]; then
+            loggit "PASS" "Successfully backed up /srv/videos"
+          else
+            loggit "FAIL" "Failed to backup /srv/videos, aborting..."
+            exit 1
+          fi
         fi
 
         loggit "INFO" "Backing up /srv/images, please wait..."
@@ -196,13 +200,15 @@ restore() {
           exit 1
         fi
 
-        loggit "INFO" "Restoring /srv/videos, please wait..."
-        cp -pr ${BACKUP_LOC}/srv/videos /srv/videos
-        if [[ $? -eq 0 ]]; then
-          loggit "PASS" "Successfully restored /srv/videos"
-        else
-          loggit "FAIL" "Failed to restore /srv/videos, aborting..."
-          exit 1
+        if [[ -d ${BACKUP_LOC}/srv/videos ]]; then
+          loggit "INFO" "Restoring /srv/videos, please wait..."
+          cp -pr ${BACKUP_LOC}/srv/videos /srv/videos
+          if [[ $? -eq 0 ]]; then
+            loggit "PASS" "Successfully restored /srv/videos"
+          else
+            loggit "FAIL" "Failed to restore /srv/videos, aborting..."
+            exit 1
+          fi
         fi
 
         loggit "INFO" "Restoring /srv/images, please wait..."
@@ -216,9 +222,9 @@ restore() {
 
         # Ensure previously installed environment has correct ownership/permissions
         sudo chown ${USER}:${USER} /srv/audio
-        sudo chown ${USER}:www-data /srv /srv/images /srv/images/thumb /srv/videos
+        sudo chown ${USER}:www-data /srv /srv/images /srv/images/thumb
         sudo chmod 755 /srv
-        sudo chmod 775 /srv/audio /srv/images /srv/images/thumb /srv/videos
+        sudo chmod 775 /srv/audio /srv/images /srv/images/thumb
 
       else
         loggit "FAIL" "Required space for restore is ${RequiredSpace} MB and Free space is only ${FreeSpace} MB, aborting..."
@@ -239,9 +245,9 @@ restore() {
       sudo mv /srv_staged /srv
       # Ensure previously installed environment has correct ownership/permissions
       sudo chown ${USER}:${USER} /srv/audio
-      sudo chown ${USER}:www-data /srv /srv/images /srv/images/thumb /srv/videos
+      sudo chown ${USER}:www-data /srv /srv/images /srv/images/thumb
       sudo chmod 755 /srv
-      sudo chmod 775 /srv/audio /srv/images /srv/images/thumb /srv/videos
+      sudo chmod 775 /srv/audio /srv/images /srv/images/thumb
     else
       loggit "FAIL" "/srv_staged does not exist, aborting..."
       exit 1

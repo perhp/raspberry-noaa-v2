@@ -6,7 +6,6 @@ WEB_HOME={{ web_home }}
 IMAGE_OUTPUT={{ images_output }}
 NOAA_AUDIO_OUTPUT={{ audio_output }}/noaa
 METEOR_AUDIO_OUTPUT={{ audio_output }}/meteor
-NOAA_ANIMATION_OUTPUT={{ noaa_animation_output }}
 RAMFS_AUDIO={{ ramfs_path }}
 NOAA_LOG={{ log_file }}
 
@@ -17,12 +16,6 @@ PYTHON=/home/{{ target_user }}/.rn2_venv/bin/python3
 LAT={{ latitude }}
 LON={{ longitude }}
 ALT={{ altitude }}
-
-# Test Configuration
-TEST_GAIN={{ test_gain }}
-TEST_SDR_DEVICE_ID={{ test_sdr_device_id }}
-TEST_ENABLE_BIAS_TEE="{% if test_enable_bias_tee|lower == 'true' %}-T{% endif %}"
-TEST_FREQ_OFFSET={{ test_freq_offset }}
 
 # Pass Scheduling
 DAYS_TO_SCHEDULE_PASSES={{ days_to_schedule_passes }}
@@ -104,9 +97,8 @@ METEOR_IMAGE_QUALITY={{ meteor_jpg_image_quality }}
 PRUNE_OLDER_THAN={{ delete_older_than_n }}
 PRUNE_OLDEST={{ delete_oldest_n }}
 
-# Receiver and Decoder Configuration
+# Receiver Configuration
 RECEIVER_TYPE={{ receiver_type }}
-METEOR_DECODER={{ meteor_decoder }}
 
 # Ground Station and Enhancements
 GROUND_STATION_LOCATION='{{ ground_station_location }}'
@@ -122,7 +114,6 @@ CONTRIBUTE_TO_COMMUNITY_COMPOSITES_URL='{{ contribute_to_community_composites_ur
 # Push Notifications
 ENABLE_EMAIL_PUSH={{ enable_email_push|lower }}
 EMAIL_PUSH_ADDRESS={{ email_push_address }}
-ENABLE_EMAIL_SCHEDULE_PUSH={{ enable_email_schedule_push|lower }}
 ENABLE_DISCORD_PUSH={{ enable_discord_push|lower }}
 DISCORD_NOAA_WEBHOOK='{{ discord_noaa_webhook_url }}'
 DISCORD_METEOR_WEBHOOK='{{ discord_meteor_webhook_url }}'

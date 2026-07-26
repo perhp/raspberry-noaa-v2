@@ -12,23 +12,15 @@
 start=$(date +%s)
 
 UNINSTALL_LOG=/tmp/uninstall.log
-PACKAGES_BULLSEYE="satdump wxtoimg nginx predict php7.4-intl php8.0-sqlite3 php8.0-mbstring php8.0-fpm"
-PACKAGES_BOOKWORM="satdump wxtoimg nginx predict php8.2-intl php8.2-sqlite3 php8.2-mbstring php8.2-fpm"
-# On Trixie satdump is built from source (no apt package) - its installed files
-# are removed via PATHS below instead
-PACKAGES_TRIXIE="wxtoimg nginx predict php8.4-intl php8.4-sqlite3 php8.4-mbstring php8.4-fpm"
-PATHS="/srv/audio /srv/videos /srv/images $HOME/.config/composer $HOME/.config/gmic $HOME/.config/matplotlib $HOME/.config/meteordemod $HOME/.config/composer $HOME/.config/satdump $HOME/raspberry-noaa-v2 $HOME/.predict $HOME/.rn2_venv $HOME/.noaa-v2.conf $HOME/.wxtoimglic $HOME/.wxtoimgrc /usr/local/bin/rtl_* /var/log/raspberry-noaa-v2 /etc/sudoers.d/020_www-data-atrm-nopasswd /var/www/wx-new /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default /tmp/rtl-sdr /etc/modprobe.d/rtlsdr.conf"
+# wxtoimg/predict are removed here only to clean up legacy installs - RN2 no
+# longer installs them; satdump is built from source (no apt package) so its
+# installed files are removed via PATHS
+PACKAGES="wxtoimg nginx predict php8.4-intl php8.4-sqlite3 php8.4-mbstring php8.4-fpm"
+PATHS="/srv/audio /srv/videos /srv/images $HOME/.config/composer $HOME/.config/gmic $HOME/.config/matplotlib $HOME/.config/meteordemod $HOME/.config/composer $HOME/.config/satdump $HOME/raspberry-noaa-v2 $HOME/.predict $HOME/.rn2_venv $HOME/.noaa-v2.conf $HOME/.wxtoimglic $HOME/.wxtoimgrc /usr/local/bin/rtl_* /usr/local/bin/meteordemod /var/log/raspberry-noaa-v2 /etc/sudoers.d/020_www-data-atrm-nopasswd /var/www/wx-new /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default /tmp/rtl-sdr /etc/modprobe.d/rtlsdr.conf /usr/bin/satdump /usr/bin/satdump_sdr_probe /usr/lib/libsatdump_core.so /usr/lib/libsatdump_interface.so /usr/lib/satdump /usr/share/satdump /usr/include/satdump /tmp/satdump"
 SERVICES="phpsessionclean.service phpsessionclean.timer nginx.service"
 OS=$(cat /etc/os-release | grep -E "^DEBIAN_CODENAME|^VERSION_CODENAME" | awk -F"=" '{print $NF}' | sort | head -1)
 
-if [[ ${OS} == "bookworm" ]]; then
-  PACKAGES=${PACKAGES_BOOKWORM}
-elif [[ ${OS} == "bullseye" ]]; then
-  PACKAGES=${PACKAGES_BULLSEYE}
-elif [[ ${OS} == "trixie" ]]; then
-  PACKAGES=${PACKAGES_TRIXIE}
-  PATHS="${PATHS} /usr/bin/satdump /usr/bin/satdump_sdr_probe /usr/lib/libsatdump_core.so /usr/lib/libsatdump_interface.so /usr/lib/satdump /usr/share/satdump /usr/include/satdump /tmp/satdump"
-else
+if [[ ${OS} != "trixie" ]]; then
   echo "Aborting, unsupported Operating System ${OS}"
   exit 1
 fi

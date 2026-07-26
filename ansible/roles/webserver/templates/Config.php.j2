@@ -40,10 +40,6 @@ class Config {
   # whether to show the solar terminator day/night world map
   const ENABLE_SOLAR_TERMINATOR = '{{ enable_solar_terminator|default(true)|lower }}';
 
-  # whether to enable image video
-  const ENABLE_ANIMATION = '{{ enable_animation|lower }}';
-  const ANIMATION_VIDEO_FILE = '{{ noaa_animation_output }}';
-
   # lat and lon coordinates of base station
   const BASE_STATION_LAT = '{{ latitude }}';
   const BASE_STATION_LON = '{{ longitude }}';

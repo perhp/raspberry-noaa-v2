@@ -1,19 +1,4 @@
 ---
-- name: php repository gpg key (bookworm only)
-  become: yes
-  apt_key:
-    url: "https://packages.sury.org/php/apt.gpg"
-    state: present
-  when: raspbian_version.stdout == 'bookworm'
-
-- name: php repository (bookworm only)
-  become: yes
-  apt_repository:
-    repo: deb https://packages.sury.org/php/ bookworm main
-    filename: php8.list
-    state: present
-  when: raspbian_version.stdout == 'bookworm'
-
 - name: install UFW firewall
   become: yes
   apt:
@@ -56,32 +41,8 @@
     state: present
     name: nginx
 
-- name: install php (bullseye)
-  become: yes
-  apt:
-    update_cache: no
-    state: present
-    name:
-      - php8.0-fpm
-      - php8.0-mbstring
-      - php8.0-sqlite3
-      - php7.4-intl
-  when: raspbian_version.stdout not in ['bookworm', 'trixie']
-
-- name: install php (bookworm)
-  become: yes
-  apt:
-    update_cache: no
-    state: present
-    name:
-      - php8.2-fpm
-      - php8.2-mbstring
-      - php8.2-sqlite3
-      - php8.2-intl
-  when: raspbian_version.stdout == 'bookworm'
-
 # Trixie ships PHP 8.4 natively - no sury.org repository needed
-- name: install php (trixie)
+- name: install php
   become: yes
   apt:
     update_cache: no
@@ -91,7 +52,6 @@
       - php8.4-mbstring
       - php8.4-sqlite3
       - php8.4-intl
-  when: raspbian_version.stdout == 'trixie'
 
 - name: install composer
   become: yes
@@ -177,13 +137,6 @@
     state: directory
     group: www-data
 
-- name: update videos directory group
-  become: yes
-  file:
-    path: "{{ videos_output }}"
-    state: directory
-    group: www-data
-
 - name: update database folder permissions
   become: yes
   file:
@@ -214,7 +167,7 @@
 - name: nginx non-tls config file
   become: yes
   template:
-    src: "nginx_default_{{ raspbian_version.stdout }}.j2"
+    src: nginx_default_trixie.j2
     dest: /etc/nginx/sites-available/default
     owner: root
     group: root
@@ -244,7 +197,7 @@
 - name: nginx tls config file
   become: yes
   template:
-    src: "nginx_tls_default_{{ raspbian_version.stdout }}.j2"
+    src: nginx_tls_default_trixie.j2
     dest: /etc/nginx/sites-available/default-tls
     owner: root
     group: root

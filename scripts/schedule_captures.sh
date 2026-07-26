@@ -31,9 +31,6 @@ fi
 if [ "$OBJ_NAME" == "NOAA 19" ]; then
   SAT_MIN_ELEV=$NOAA_19_SAT_MIN_ELEV
 fi
-if [ "$OBJ_NAME" == "METEOR-M 2" ]; then
-  SAT_MIN_ELEV=$METEOR_M2_3_SAT_MIN_ELEV
-fi
 if [ "$OBJ_NAME" == "METEOR-M2 3" ]; then
   SAT_MIN_ELEV=$METEOR_M2_3_SAT_MIN_ELEV
 fi

@@ -31,8 +31,8 @@ if [ -f "$push_attachment_file" ] && [ ! -z push_attachment_file ]; then
   fsize=`stat -c%s ${push_attachment_file}`
   if [ "$fsize" -gt "$FSIZE_LIMIT" ]; then
     echo "File too large. Need to resize"
-    ffmpeg -y -i ${push_attachment_file} -vf "scale=iw*0.8:-1" /tmp/rn2.jpg
-    push_attachment_file=/tmp/rn2.jpg 
+    $CONVERT "${push_attachment_file}" -resize 80% /tmp/rn2.jpg
+    push_attachment_file=/tmp/rn2.jpg
   fi
   push_attachment="-F attachment=@${push_attachment_file}"
 else
