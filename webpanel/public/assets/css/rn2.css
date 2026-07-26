@@ -328,8 +328,11 @@ table.telemetry td.no-passes {
 }
 
 .lamp svg {
-  width: 0.8rem;
-  height: 0.8rem;
+  /* 0.75rem = 12px: with the lamp's 22px content box (24px minus 1px
+     borders) this centers on whole pixels; fractional sizes rasterize
+     with a visible 1px right/down bias */
+  width: 0.75rem;
+  height: 0.75rem;
   display: block;
 }
 
