@@ -1,241 +1,328 @@
 ![Raspberry NOAA](assets/header_1600_v2.png)
 
-Looking for support, wanting to talk about new features, or just hanging out? Come chat with us on [Discord!](https://discord.gg/A9w68pqBuc)
+A complete, self-hosted ground station for receiving, decoding, and sharing **NOAA APT** and **Meteor-M LRPT** weather satellite imagery — running on a Raspberry Pi or any x64 Debian PC with a cheap software-defined radio.
 
-**_This is a spinoff of the original [raspberry-noaa](https://github.com/reynico/raspberry-noaa) created by Nico - they have
-graciously permitted me to push this project forward with a major refactor to enhance things such as usability, style, and general
-updates. All original content has been preserved (as have all commits up to the point of this repo creation) to retain credit to the
-original creators. Please see the "Credits" section of this README for additional info and contributions from the fantastic
-NOAA/METEOR community!._**
+One command installs everything. After that, the station runs itself: it predicts passes, schedules captures, decodes images with [SatDump](https://github.com/SatDump/SatDump), publishes them to a built-in web panel, and (optionally) pushes them to your favorite social/chat platforms.
 
-Wanting to give this version a go but not sure what's involved to get from the original raspberry-noaa to raspberry-noaa-v2? Check
-out this simple [migration document](docs/migrate_from_raspberry_noaa.md) that explains the few commands you need to run and retain
-your original data!
+Looking for support, wanting to talk about new features, or just hanging out? Come chat with us on [Discord](https://discord.gg/A9w68pqBuc)!
 
-Finally, if you're looking for one of the cheapest ways to get started from an antenna perspective, check [this](https://jekhokie.github.io/noaa/satellite/rf/antenna/sdr/2019/05/31/noaa-satellite-imagery-sdr.html) out, specifically around how to use a cheap rabbit ears antenna as a dipole for capturing NOAA and Meteor images!
+> _This project is a spinoff of the original [raspberry-noaa](https://github.com/reynico/raspberry-noaa) created by Nico, who graciously permitted this major refactor to push the project forward. All original history and credit is preserved — see [Credits](#credits)._
 
-# Announcements
+---
 
-* 26.7.2026. The project has been slimmed down considerably: SatDump is now the only decoder for both NOAA and Meteor captures (the legacy wxtoimg and MeteorDemod decoders were removed along with their settings and dependencies), pass prediction is done natively in Python (the old `predict` binary is gone, and with it the 9-character username limit), Python packages are installed into a dedicated virtualenv (`~/.rn2_venv`), and **Debian Trixie (13) is now the only supported OS** - Bookworm and Bullseye support has been removed. SatDump is always built from source during install, so expect the first install on a Raspberry Pi to take a while.
+## Table of contents
 
-* 26.7.2026. Debian Trixie (13) support has been added, alongside the existing Bookworm support. On Trixie the webpanel runs on the distro's native PHP 8.4 (no third-party repository needed) and SatDump is built from source during install since upstream provides no Trixie package — expect the first install on a Raspberry Pi to take considerably longer. Note: the wkhtmltopdf tool was removed from Debian Trixie, so the optional "email an image of the pass schedule" feature is automatically skipped on Trixie.
+- [How it works](#how-it-works)
+- [Features](#features)
+- [Supported satellites](#supported-satellites)
+- [Hardware requirements](#hardware-requirements)
+- [Software requirements](#software-requirements)
+- [Getting started](#getting-started)
+  - [Option 1: prebuilt images](#option-1-prebuilt-images)
+  - [Option 2: install from source](#option-2-install-from-source)
+- [The webpanel](#the-webpanel)
+- [JSON API and RSS feed](#json-api-and-rss-feed)
+- [Sharing your captures](#sharing-your-captures)
+- [Station health watchdog](#station-health-watchdog)
+- [Housekeeping](#housekeeping)
+- [Changing settings after install](#changing-settings-after-install)
+- [Upgrading](#upgrading)
+- [Troubleshooting](#troubleshooting)
+- [Migrating from the original raspberry-noaa](#migrating-from-the-original-raspberry-noaa)
+- [Documentation index](#documentation-index)
+- [Credits](#credits)
+- [Contributing](#contributing)
 
-* 31.7.2024. We are sunsetting the legacy Debian Bullseye support for Raspberry Pi and x64 PCs. We have supported it for some time after the Bookworm support came out in May 2024. Thank you for using the raspberry-noaa-v2 project on these operating systems. New updates for SatDump and other features related to SatDump **will only be available for 64-bit Raspberry OS version Bookworm, and 64-bit Debian Bookworm-based Linux distributions for x64 PCs** as of now. If you'd like to continue receiving the new updates, we highly suggest you perform a full reinstallation of your operating system and conduct a fresh installation of raspberry-noaa-v2. It is possible to save previously received images before reinstalling the operating system by making a copy of `panel.db` file inside `~/raspberry-noaa-v2/db` directory and the whole `/srv` directory; restore these files after your new installation has finished. If you're satisfied with the current features available, you are free to use the system as-is. 
+## How it works
 
-# Raspberry NOAA (...and Meteor) V2
+Once installed, the station runs a fully automated capture pipeline:
 
-NOAA and Meteor-M 2 satellite imagery capture setup for regular 64-bit Debian Trixie computers and 64-bit Raspberry Pi OS Trixie!
+1. **Predict** — every night (and at boot), a cron job downloads fresh TLEs from Celestrak and computes upcoming passes for every enabled satellite using a native Python (ephem) predictor.
+2. **Schedule** — each pass becomes an `at` job. When two passes overlap, the station automatically keeps the better one (configurable — it can also prefer Meteor over NOAA, or leave the decision to you).
+3. **Capture and decode** — at pass time, SatDump records and decodes the signal live. If enough free RAM is available, intermediate audio/CADU data is kept in ramfs to spare your SD card.
+4. **Post-process** — images are normalized, enhanced (dozens of false-color and thermal composites), annotated with map overlays, and complemented with polar pass plots and thumbnails. Per-pass signal quality (SNR) is recorded.
+5. **Publish** — everything lands in the webpanel gallery, the JSON API, and the RSS feed, and can be pushed automatically to a dozen social/chat platforms.
 
-See "Credits" for the awesome way this version of the framework came to be.
+Everything is stored in a local SQLite database and served by nginx + PHP on the device itself — no cloud services required.
 
-## Super Easy setup: Use a maintained image
-Want a really simple way to get up and running? 
+## Features
 
-VE3ELB has been maintaining a pre-built image of Raspberry-Noaa-V2 ('RN2') over here:
-[https://qsl.net/ve3elb/RaspiNOAA/](https://qsl.net/ve3elb/RaspiNOAA/)
-Setup instructions are in the PDF that is included. 
+**Capture and decoding**
+- SatDump live decoding for both NOAA APT and Meteor-M LRPT (including the Meteor 80k interleaved mode)
+- Per-satellite tuning: gain, PPM frequency offset, bias-tee power, minimum pass elevation, minimum sun elevation (day/night control), and SDR device assignment
+- Multiple SDRs supported simultaneously — assign a different device to each satellite
+- Automatic resolution of overlapping passes, with optional Meteor-over-NOAA priority
+- RAM-based recording (ramfs) when memory allows, reducing SD card wear
+- Per-pass signal quality metrics (peak/average SNR) stored and displayed
 
-There is also an image maintained by Jochen Köster DC9DD here. 
-[https://www.qsl.net/do3mla/raspberry-pi-images.html](https://www.qsl.net/do3mla/raspberry-pi-images.html)
-For interest, Jochen's image is the base for this off-grid system in Northern Norway! 
-[https://usradioguy.com/science/off-grid-apt-lrpt-satellite-ground-station/](https://usradioguy.com/science/off-grid-apt-lrpt-satellite-ground-station/)
+**Image processing**
+- Full set of SatDump enhancements for NOAA (MSA, MCIR, precipitation variants, HVC/HVCT, thermal, sea-surface temperature, and many more) with separate day and night enhancement lists
+- Meteor composites including 221/321 visible, 654 night, thermal, MCIR, 3.9 µm shortwave IR, and optional fire-detection
+- Optional equirectangular (map-projected) versions of Meteor composites — geographically aligned, which also enables daily timelapse animation
+- Country border map overlays, thermal temperature scale overlay (position configurable), image cropping, Meteor image flipping, and configurable JPEG quality
+- Polar plots of each pass (azimuth/elevation and direction graphs) and thumbnails for the gallery
 
-There is also an image by MihajloPi maintained at: [https://drive.google.com/drive/folders/1acaZ78VEROc7BWVtJ82C6qVrccA9CkR6](https://drive.google.com/drive/folders/1acaZ78VEROc7BWVtJ82C6qVrccA9CkR6)
-This image is oriented towards the general user and doesn't come with much software installed other than necessary. It was built from the minimal desktop version of the Raspberry OS Bullseye.
+**Webpanel** (mobile friendly, light/dark mode, 17 languages)
+- Pass schedule with a live "capture in progress" status banner
+- Capture gallery with filtering, per-pass image pages, and progressive JPEGs for fast loading
+- Station statistics page: capture counts, reception-quality sky map (see where your antenna hears best), and the latest daily timelapse
+- Admin page for managing scheduled passes (optionally password-protected)
+- Optional extras on the passes page: Satvis orbit visualization, solar terminator day/night map, coronal mass ejection activity display
+- Optional TLS (HTTPS) with Let's Encrypt support
 
-These images are not always up to speed with the latest code, but lots of folks find images are a great way to get started quickly!
+**Integrations and sharing**
+- Push each capture to: Discord, Telegram, Matrix, Slack, Pushover, Mastodon, Bluesky, Twitter/X, Facebook, Instagram, or email
+- Generic JSON webhook for home automation (Home Assistant, n8n, Node-RED, …)
+- Push quality gate — only share passes above a minimum elevation and/or SNR, so weak captures stay off your feeds
+- Daily "best of day" summary post, optionally with an animated Meteor timelapse GIF
+- Read-only JSON API and RSS 2.0 feed for external dashboards and feed readers
+- Optional contribution of your captures to community-built worldwide composites
 
-## Quick Start - building the latest from the source on this repo
+**Operations**
+- One command (`./install_and_upgrade.sh`) for both install and every subsequent configuration change or upgrade
+- Station health watchdog — hourly self-check that alerts you (via your enabled push channels) when captures stop succeeding, disk fills up, scheduling breaks, or the SDR disappears from USB
+- Automatic pruning of old images and audio, database backup tooling
+- Verification tool to smoke-test an installation, extensive logging
 
-Want to build your own, but don't want all the nitty-gritty details? 
-Here's a quick start - if you have questions, continue reading the rest of this README or
-reach out by submitting an issue:
+## Supported satellites
+
+| Satellite | Downlink | Mode |
+| --- | --- | --- |
+| NOAA 15 | 137.6200 MHz | APT |
+| NOAA 18 | 137.9125 MHz | APT |
+| NOAA 19 | 137.1000 MHz | APT |
+| Meteor-M N2-3 | 137.9000 MHz | LRPT |
+| Meteor-M N2-4 | 137.9000 MHz | LRPT |
+
+Each satellite is individually enabled in `config/settings.yml` and individually tunable (gain, elevations, SDR device, bias tee, frequency offset).
+
+## Hardware requirements
+
+**Computer** — one of:
+- Raspberry Pi 3, 4, or 5 (any variant of these models), running 64-bit Raspberry Pi OS (Trixie)
+- Any x64 PC running a 64-bit Debian Trixie based distribution
+
+A Pi 3 works, but faster hardware helps with the first-time SatDump source build and with image processing. A desktop environment is fine but unnecessary — the minimal ("Lite") OS images are recommended so the GUI doesn't compete for CPU during a capture.
+
+**SDR receiver** — set `receiver_type` in `config/settings.yml` to match:
+
+| `receiver_type` | Device |
+| --- | --- |
+| `rtlsdr` | RTL-SDR dongles, including the RTL-SDR Blog V4 (rtl-sdr is built from source for V4 support) |
+| `airspy_mini` | Airspy Mini |
+| `airspy_r2` | Airspy R2 |
+| `airspy_hf_plus_discovery` | Airspy HF+ Discovery |
+| `hackrf` | HackRF |
+| `sdrplay` | SDRplay devices (the proprietary API installer is bundled) |
+| `mirisdr` | MiriSDR-based devices |
+
+Multiple SDRs of the same type can be told apart by device ID (see [docs/setting_sdr_source_id.md](docs/setting_sdr_source_id.md)).
+
+**Antenna** — anything that receives 137 MHz right-hand circular polarized signals works: a V-dipole, QFH, or turnstile. For one of the cheapest ways to get started (rabbit-ears-as-dipole), see [this guide](https://jekhokie.github.io/noaa/satellite/rf/antenna/sdr/2019/05/31/noaa-satellite-imagery-sdr.html). An LNA (e.g. Sawbird+ NOAA) noticeably improves results and can be powered via the bias-tee settings.
+
+For historical hardware compatibility notes, see [docs/hardware.md](docs/hardware.md).
+
+## Software requirements
+
+**Only 64-bit Debian Trixie (13) based systems are supported** — the installer refuses to run on anything else. That means:
+
+- 64-bit Raspberry Pi OS based on Trixie, or
+- any 64-bit Debian Trixie based distro on a PC (desktop environment doesn't matter).
+
+Other requirements, all handled during setup:
+- The repository must be cloned to the home directory (`~/raspberry-noaa-v2`) of a **normal user with sudo privileges** — never run the installer as root.
+- `git` must be installed to clone the repository.
+- SatDump is built from source during the first install (upstream provides no Trixie package), so **expect the first install on a Raspberry Pi to take quite a while**. Subsequent runs skip it.
+
+## Getting started
+
+### Option 1: prebuilt images
+
+Community members maintain ready-to-flash Raspberry Pi images — a great way to get running quickly (they may lag behind the latest code):
+
+- **VE3ELB**: [https://qsl.net/ve3elb/RaspiNOAA/](https://qsl.net/ve3elb/RaspiNOAA/) (setup instructions in the included PDF)
+- **Jochen Köster DC9DD**: [https://www.qsl.net/do3mla/raspberry-pi-images.html](https://www.qsl.net/do3mla/raspberry-pi-images.html) — the base of [this off-grid station in Northern Norway](https://usradioguy.com/science/off-grid-apt-lrpt-satellite-ground-station/)
+- **MihajloPi**: [Google Drive folder](https://drive.google.com/drive/folders/1acaZ78VEROc7BWVtJ82C6qVrccA9CkR6) — minimal, general-user oriented
+
+### Option 2: install from source
+
+Fresh OS? Do the basics first (on a Pi, `sudo raspi-config` to set locale/timezone/WiFi country):
 
 ```bash
-# update os localisation settings like timezone, locale and WiFi country, and expand the filesystem
-sudo raspi-config
-
-# install git
-sudo apt install git -y
-
-# clone repository
-cd $HOME
-git clone --depth 1 https://github.com/jekhokie/raspberry-noaa-v2.git
-cd raspberry-noaa-v2/
-
-# create your settings file from the template and edit it to match your
-# station's location, gain and other things (settings.yml is not tracked
-# by git, so your configuration never conflicts with future 'git pull's)
-cp config/settings.yml.example config/settings.yml
-nano config/settings.yml
-
-# perform install
-./install_and_upgrade.sh
-```
-
-Once complete, follow the [migration document](docs/migrate_from_raspberry_noaa.md) if you want to migrate from the original raspberry-noaa
-to this version 2 (keep your previous captures and make them visible).
-
-In addition, if you have elected to run a TLS-enabled web server, see [THIS LINK](docs/tls_webserver.md) for some additional information
-on how to set up an admin login and get your Let's Encrypt signed TLS/SSL certificate.
-
-To see what occurred during a capture event, check out the log file `/var/log/raspberry-noaa-v2/output.log`.
-
-## Why a Version 2?
-
-A lot of the work done by Nico and the original Instructables poster was absolutely fantastic and simple. However, as I started
-using the framework, I found myself making a lot of changes but getting the changes into place in a manageable way was a bit difficult.
-In discussing this with Nico, we agreed that there is a logical next maturity step for this framework, so I took this on to provide
-a simple, one-command script and corresponding framework to manage and maintain the entire project when any changes occur, and
-refactored the webpanel functionality significantly to enable better feature additions in the future.
-
-Check out the release notes for fixes and enhancements for each of the various releases since the V1 split to V2!
-
-Also, check out [THIS LINK](docs/webpanel_screenshots.md) for some screen shots of the webpanel, which is now mobile friendly!
-
-## Compatibility
-
-**Only 64-bit Debian Trixie (13) based systems are supported** - the installer refuses to run on anything else. This version works on Pi 3, Pi 4 and Pi 5 (and the variants of these models) running 64-bit Raspberry Pi OS Trixie, as well as regular x64 PCs running any Debian Trixie based distro. Desktop environment (Gnome, KDE, Cinnamon, XFCE...) doesn't matter, it only has to be 64-bit Debian Trixie.
-
-If you're interested in the details behind the original raspberry-noaa hardware compatibility tests, see the [hardware](docs/hardware.md)
-document.
-
-## Prerequisites
-
-Below are some prerequisites steps and considerations before installing this software:
-
-1. Although the software certainly works on a Pi with a desktop environment installed, it would be best to use the minimal Raspberry Pi
-OS (no desktop environment) to help avoid processing interference due to higher CPU/Memory consumption from the GUI components.
-2. Update your localisation settings on your Pi prior to installing the software using the `sudo raspi-config` command, updating
-"5 Localisation Options -> L1 Locale" and "5 Localisation Options -> L2 Timezone" settings to match your base station location for more
-consistent time and language handling.
-3. You need git installed to clone the repository - this can be done via `sudo apt install git -y`.
-4. It's not recommended to use the default user "pi" and the default password "raspberry". While it is not
-recommended that you expose a Pi instance to the public internet for access (unless you have a VERY strict process about security
-patching, and even then it would still be questionable), updating your Pi user password is a decent first step for security.
-
-## Install
-
-To install the product, and get going if you're using a 64-bit Debian Trixie based computer, you first need to stop sudo from asking to enter a password. It will ensure all commands are handled well, and that our project can access superuser privileges for certain things like moving files around in the audio and image directory etc.
-
-To achieve this, run:
-
-`echo "$USER ALL=(ALL) NOPASSWD: /bin/ls" | sudo tee -a /etc/sudoers`
-
-Then reboot the computer:
-
-`sudo reboot`
-
-The following steps are for both regular computers and Raspberry Pi:
-
-Clone the project to the user's home directory, set up your settings, and run the
-install script:
-
-```bash
-# update the system
+# bring the system up to date, then reboot
 sudo apt update
 sudo apt full-upgrade -y
-
-# reboot the system
 sudo reboot
 
 # install git
 sudo apt install git -y
+```
 
-# clone repository
+Then clone, configure, and install:
+
+```bash
+# clone the repository into your home directory (the expected location)
 cd $HOME
 git clone --depth 1 https://github.com/jekhokie/raspberry-noaa-v2.git
 cd raspberry-noaa-v2/
 
-# create your settings file from the template and update it to match your
-# location, gain and other setup-specific settings
+# create your settings file from the template and edit it: at minimum set
+# your latitude/longitude/altitude, enable the satellites you want, and
+# set your receiver_type and gain
 cp config/settings.yml.example config/settings.yml
 nano config/settings.yml
 
-# perform install
+# run the installer (as your normal user - NOT root/sudo; you will be
+# asked for your sudo password along the way)
 ./install_and_upgrade.sh
 ```
 
-Once the script completes, you can either follow the [migration document](docs/migrate_from_raspberry_noaa.md) (if you had previously
-been using raspberry-noaa on this device) or, if this is a brand new setup, just visit the webpanel and get going!
+The installer validates your settings, then uses Ansible to install and configure everything: SatDump (built from source on first run — be patient), rtl-sdr, nginx + PHP webpanel, the Python environment, cron jobs, udev rules, and the database. When it finishes, passes are already scheduled.
 
-**NOTE**: If you have elected to run a TLS-enabled web server, see [THIS LINK](docs/tls_webserver.md) for some additional information
-on how to handle self-signed certificates when attempting to visit your webpanel and enabling auth for the admin pages.
+**That's it.** Open `http://<ip-of-your-device>/` in a browser to see the webpanel, and wait for the first pass. Capture activity is logged to `/var/log/raspberry-noaa-v2/output.log`.
 
-## Upgrade
+If you enabled TLS and/or the admin page lock, see [docs/tls_webserver.md](docs/tls_webserver.md) for certificate and login details.
 
-Want to get the latest and greatest content from the GitHub master branch? Easy!
-Run:
+## The webpanel
 
-`git pull`
+The webpanel (see [screenshots](docs/webpanel_screenshots.md)) is served directly from the device and is mobile friendly, with light and dark modes and translations for 17 languages (`lang_setting`: ar, bg, cn, de, en, es, fr, gr, hu, it, kr, lt, nl, pt, ro, ru, sr).
 
-inside the raspberry-noaa-v2 folder, then re-run `./install_and_upgrade.sh`. Your `config/settings.yml` is not tracked by git, so pulling never conflicts with your station configuration.
+- **Passes** — upcoming pass schedule with a live banner while a capture/decode is in progress. Optional extras: Satvis satellite tracking visualization, a solar terminator world map, and a coronal mass ejection activity display.
+- **Captures** — filterable gallery of every decoded pass; each capture page shows all enhancement images, the polar pass plots, and signal quality.
+- **Stats** — station statistics, a reception-quality sky map built from your pass history (spot obstructions and antenna blind spots), and the most recent daily timelapse.
+- **Admin** — manage scheduled passes; can be locked behind a username/password (`lock_admin_page` — only do this on a TLS-enabled site, credentials over plain HTTP can be intercepted).
 
-***NOTE***: after an upgrade, compare your `config/settings.yml` against `config/settings.yml.example` - settings are occasionally added or retired. Leftover retired keys are harmless, but new features may need their new keys copied over.
+## JSON API and RSS feed
 
-If you have elected to run a TLS-enabled web server, see [THIS LINK](docs/tls_webserver.md) for some additional information
-on how to handle self-signed certificates when attempting to visit your webpanel and enabling auth for the admin pages.
+The webpanel exposes a small, read-only, unauthenticated JSON API plus an RSS feed — useful for external dashboards, home automation, and feed readers ([full documentation](docs/api.md)):
 
-## In-Situ Upgrade
+| Endpoint | Returns |
+| --- | --- |
+| `GET /api/passes` | upcoming scheduled passes |
+| `GET /api/captures?limit=N` | latest decoded captures (default 20, max 100) |
+| `GET /api/capture?id=N` | one capture with all enhancement image URLs |
+| `GET /api/status` | the pass being captured right now (if any) and the next one |
+| `GET /api/rss` | RSS 2.0 feed of the latest captures with thumbnails |
 
-Want to switch your existing RN2 installation to a different Github branch without loosing your settings and images?  
+## Sharing your captures
 
-    **Introduction of RN2 Upgrade tool**
+Every completed capture can be pushed automatically to any combination of:
 
-       ${HOME}/.rn2_utils/rn2_upgrade.sh https://github.com/jekhokie/raspberry-noaa-v2.git -b beta-development
+| Channel | Docs / notes |
+| --- | --- |
+| Discord | [docs/discord_push.md](docs/discord_push.md) |
+| Telegram | [docs/telegram_push.md](docs/telegram_push.md) |
+| Matrix | [docs/matrix_push.md](docs/matrix_push.md) |
+| Slack | webhook-based |
+| Pushover | mobile push notifications |
+| Mastodon | — |
+| Bluesky | — |
+| Twitter/X | [docs/twitter_push.md](docs/twitter_push.md) |
+| Facebook | [docs/facebook_push.md](docs/facebook_push.md) |
+| Instagram | [docs/instagram_push.md](docs/instagram_push.md) |
+| Email | [docs/emailing.md](docs/emailing.md) (requires `~/.msmtprc`) |
+| Generic webhook | [docs/webhook_push.md](docs/webhook_push.md) — JSON POST per capture, for Home Assistant, n8n, Node-RED, … |
 
-        Just point to the branch you want to switch to by modifying the above line as needed.     
+Two features keep your feeds high quality:
 
-## Post Install
+- **Push quality gate** (`enable_push_quality_gate`) — skip pushing weak passes below a minimum elevation and/or SNR. Everything is still decoded and shown in the webpanel; only the social push is skipped (the generic webhook always fires).
+- **Best-of-day summary** ([docs/best_of_day.md](docs/best_of_day.md)) — an evening cron job posts the single best capture of the day (ranked by SNR, then elevation). With `enable_daily_timelapse`, it also builds an animated GIF from the day's map-projected Meteor passes and attaches it.
 
-There are and will be future "optional" features for this framework. Below is a list of optional capabilities that you may wish
-to enable/configure with links to the respective instructions:
+You can also opt in to contributing captures to community-built worldwide composites (`contribute_to_community_composites` — no personal data is collected).
 
-* [Pruning Old Images](docs/pruning.md)
-* [Database Backups](docs/db_backups.md)
-* [Emailing Images (IFTTT)](docs/emailing.md)
-* [Pushing Images to Discord](docs/discord_push.md)
+## Station health watchdog
 
-## Changing Configurations After Install
+An unattended ground station fails silently — the watchdog ([docs/health_watchdog.md](docs/health_watchdog.md)) makes it fail loudly instead. An hourly self-check alerts you through your enabled text-capable push channels (Telegram, Discord, Pushover, Slack, webhook) when:
 
-Want to make changes to either the base station functionality or webpanel settings? Simply update the `config/settings.yml` file
-and re-run `./install_and_upgrade.sh` - the script will take care of the rest of the configurations!
+- no capture has succeeded for a configurable number of hours (default 48),
+- every recent pass attempt is failing,
+- the image disk is nearly full (default threshold 90%),
+- the scheduling queue is empty (broken TLE download or scheduler), or
+- the RTL-SDR has disappeared from USB.
+
+Each alert repeats at most once per 24 hours while the condition persists. Enabled by default (`enable_health_watchdog`).
+
+## Housekeeping
+
+- **Image pruning** ([docs/pruning.md](docs/pruning.md)) — delete the oldest N captures per run and/or everything older than N days (`delete_oldest_n`, `delete_older_than_n`); old timelapse GIFs are pruned too.
+- **Audio cleanup** — recordings can be deleted immediately after decoding (`delete_noaa_audio` / `delete_meteor_audio`) or automatically after a few days (`delete_files_older_than_days`).
+- **Database backups** ([docs/db_backups.md](docs/db_backups.md)) — back up the SQLite `panel.db` on a schedule.
+
+## Changing settings after install
+
+`config/settings.yml` is the single configuration file for everything — station location, satellites, SDR, image processing, webpanel, and integrations. To change anything:
+
+```bash
+nano config/settings.yml
+./install_and_upgrade.sh
+```
+
+The script re-applies the entire configuration; there is nothing else to edit. (`settings.yml` is not tracked by git, so your configuration never conflicts with updates.)
+
+Two settings-related notes:
+- If you *lower* `days_to_schedule_passes`, wipe the already-scheduled future jobs afterwards: `./scripts/schedule.sh -x`
+- To re-schedule passes manually at any time with fresh TLEs: `./scripts/schedule.sh -t`
+
+## Upgrading
+
+```bash
+cd ~/raspberry-noaa-v2
+git pull
+./install_and_upgrade.sh
+```
+
+After upgrading, compare your `config/settings.yml` with `config/settings.yml.example` — settings are occasionally added or retired. Leftover retired keys are harmless, but new features may need their new keys copied over.
+
+**Switching branches** without losing settings and images (e.g. to try a development branch):
+
+```bash
+${HOME}/.rn2_utils/rn2_upgrade.sh https://github.com/jekhokie/raspberry-noaa-v2.git -b <branch-name>
+```
 
 ## Troubleshooting
 
-If you're running into issues where you're not seeing imagery after passes complete or getting blank/strange images, you can check
-out the [troubleshooting](docs/troubleshooting.md) document to try and narrow down the problem. In addition, you can inspect the log
-output file in `/var/log/raspberry-noaa-v2/output.log` to investigate potential errors or issues during capture events.
+1. **Check the log**: `/var/log/raspberry-noaa-v2/output.log` records every capture event, including errors.
+2. **Run the verification tool** (~1 minute) — checks permissions, packages, and does dry runs of nginx and a 1-second SatDump capture:
+   ```bash
+   ~/raspberry-noaa-v2/scripts/tools/verification_tool/verification.sh
+   ```
+3. **Read the [troubleshooting guide](docs/troubleshooting.md)** for blank/noisy image issues and other common problems.
+4. **Ask for help** on [Discord](https://discord.gg/A9w68pqBuc), or open a GitHub issue. You can also email MihajloPi at mihajlo.raspberrypi@gmail.com — include the log so the errors can be debugged.
 
+## Migrating from the original raspberry-noaa
 
-**Introduction of verification tool**
+Coming from Nico's original raspberry-noaa? A few commands migrate your station and keep all your existing captures visible — see the [migration document](docs/migrate_from_raspberry_noaa.md).
 
-The verification tool can be used to help identify RN2 installation/configuration issues which may potentially prevent proper functioning of capture/decode/processing of APT telemetry data.
+Upgrading a device from an older RN2/OS version? Only Debian Trixie is supported now: back up `db/panel.db` and the `/srv` directory, reinstall the OS fresh, restore those paths, then install as usual.
 
-Execute the verification script (takes about a minute):
+## Documentation index
 
-  $HOME/raspberry-noaa-v2/scripts/tools/verification_tool/verification.sh
-
-   Dryrun of binaries includes executing :
-
-    nginx web page returned 200 OK status to confirm Web Portal is up.
-    satdump live capture for 1 second to ensure it runs without error.
-
-Still having problems? You can email MihajloPi at mihajlo.raspberrypi@gmail.com and be sure to send him the log so he can debug the errors!
-
-## Additional Feature Information
-
-The decoding model has been changed with release 3.0 to default to using satdump_live based capture via Python for both Meteor 
-(which was previously an option) and now also for NOAA. This will open the platform up for developers to integrate alternative hardware capture than RTL-SDR.
-
-For additional information on some of the capabilities included in this framework, see below:
-
-  - [Meteor M2-3 Full Decoding](docs/meteor.md)
+| Document | Topic |
+| --- | --- |
+| [docs/api.md](docs/api.md) | JSON API and RSS feed |
+| [docs/best_of_day.md](docs/best_of_day.md) | Daily best-capture summary push and timelapse |
+| [docs/db_backups.md](docs/db_backups.md) | Database backups |
+| [docs/discord_push.md](docs/discord_push.md) | Discord integration |
+| [docs/emailing.md](docs/emailing.md) | Emailing images (IFTTT) |
+| [docs/facebook_push.md](docs/facebook_push.md) | Facebook integration |
+| [docs/hardware.md](docs/hardware.md) | Historical hardware compatibility notes |
+| [docs/health_watchdog.md](docs/health_watchdog.md) | Station health watchdog |
+| [docs/instagram_push.md](docs/instagram_push.md) | Instagram integration |
+| [docs/matrix_push.md](docs/matrix_push.md) | Matrix integration |
+| [docs/meteor.md](docs/meteor.md) | Meteor-M full decoding details |
+| [docs/migrate_from_raspberry_noaa.md](docs/migrate_from_raspberry_noaa.md) | Migrating from the original raspberry-noaa |
+| [docs/pruning.md](docs/pruning.md) | Pruning old images |
+| [docs/setting_sdr_source_id.md](docs/setting_sdr_source_id.md) | Multiple SDR device IDs |
+| [docs/telegram_push.md](docs/telegram_push.md) | Telegram integration |
+| [docs/tls_webserver.md](docs/tls_webserver.md) | TLS/HTTPS and admin login |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Troubleshooting captures and images |
+| [docs/twitter_push.md](docs/twitter_push.md) | Twitter/X integration |
+| [docs/webhook_push.md](docs/webhook_push.md) | Generic webhook integration |
+| [docs/webpanel_screenshots.md](docs/webpanel_screenshots.md) | Webpanel screenshots |
 
 ## Credits
 
-The NOAA/METEOR image capture community is a group of fantastic, experienced engineers, radio operators, and tinkerers that all contributed in some way, shape,
-or form to the success of this repository/framework. Below are some direct contributions and call-outs to the significant efforts made:
+The NOAA/METEOR image capture community is a group of fantastic, experienced engineers, radio operators, and tinkerers that all contributed in some way, shape, or form to the success of this repository/framework. Below are some direct contributions and call-outs to the significant efforts made:
 
 * **[haslettj](https://www.instructables.com/member/haslettj/)**: Did the hard initial work and created the post to instruct on how to build the base of this framework.
     * [Instructables](https://www.instructables.com/id/Raspberry-Pi-NOAA-Weather-Satellite-Receiver/) post had much of the content needed to kick this work off.
@@ -260,20 +347,20 @@ or form to the success of this repository/framework. Below are some direct contr
 * **[Jérôme jp112sdl](https://github.com/jp112sdl)**: Implemented automatic discarding of Meteor M2-3 night passes since they give no visible image when it's in RGB123 mode.
 * **[patrice7560](https://meteo-schaltin.duckdns.org)**: Beta tester, helped in detecting and reporting errors ASAP for debugging.
 * **[Richard AI4Y](https://www.qrz.com/db/AI4Y)**: Provided Debian 12 (Bookworm) support for Raspberry Pi, 64-bit Raspberry OS support, discovered the FFMPEG bug when creating spectrograms, solved atrm errors on the website, and several NTP and timezone issues in PHP, developed Verification Tool, Developed In-Situ Upgrade for switching repo's/branches, developed RN2 Utilities for backup/restore/stage, uninstall and upgrading, general warning cleanup of scripts, Made 32-bit wxtoimg run on 64-bit Debian, creates satdump/predict DEB files for armhf & arm64, general alpha and beta testing.
+
 ## Contributing
 
 Pull requests are welcome! Simply follow the below pattern:
 
 1. Fork the repository to your own GitHub account.
 2. `git clone` your forked repository.
-3. `git checkout -b <my-branch-name>` to create a branch, replacing it with your actual branch name.
+3. `git checkout -b <my-branch-name>` to create a branch.
 4. Do some awesome feature development or bug fixes, committing to the branch regularly.
 5. `git push origin <my-branch-name>` to push your branch to your forked repository.
 6. Head back to the upstream `jekhokie/raspberry-noaa-v2` repository and submit a pull request using your branch from your forked repository.
 7. Provide really good details on the development you've done within the branch, and answer any questions asked/address feedback.
 8. Profit when you see your pull request merged to the upstream master and used by the community!
 
-Make sure you keep your forked repository up to date with the upstream `jekhokie/raspberry-noaa-v2` master branch as this will make
-development and addressing merge conflicts MUCH easier in the long run.
+Keep your fork's master in sync with upstream to make merge conflicts easier down the road.
 
 Happy coding (and receiving)!
