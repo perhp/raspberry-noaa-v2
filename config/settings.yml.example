@@ -224,6 +224,19 @@ disable_at_mail: false
 #   enable_matrix_push - whether to push images to a Matrix room
 #     * see docs/matrix_push.md for instructions
 
+# daily summary push - an evening cron job that picks the day's best capture
+# (ranked by peak SNR, then max elevation) and pushes a single post through the
+# enabled push channels; a lower-noise alternative or complement to per-pass pushes
+#   enable_daily_timelapse - additionally build an animated GIF from the day's
+#        equirectangular Meteor projections (requires meteor_create_equidistant_projection)
+#        and attach it to the daily post
+#   daily_timelapse_suffix - which projection to animate (must match an image
+#        suffix produced by the decoder, e.g. -321_equirect_projected.jpg,
+#        -MCIR_equirect_projected.jpg)
+enable_best_of_day_push: false
+enable_daily_timelapse: false
+daily_timelapse_suffix: "-321_equirect_projected.jpg"
+
 # push quality gate - when enabled, social pushes (Discord, Telegram, email, etc.)
 # are skipped for weak passes so feeds don't fill up with noisy captures; everything
 # is still decoded, stored and shown in the webpanel, and the generic webhook still
