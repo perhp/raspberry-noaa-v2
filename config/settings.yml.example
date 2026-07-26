@@ -237,6 +237,14 @@ pushover_prio: 0
 enable_telegram_push: false
 telegram_bot_token: ""
 telegram_chat_id: ""
+# enable_webhook_push - whether to POST a JSON payload describing each completed
+#                       capture (satellite, pass metadata, image paths) to a custom URL,
+#                       for integrating with Home Assistant, n8n, Node-RED, etc.
+#   webhook_push_url - the URL to POST to
+#   webhook_push_auth_token - optional bearer token sent as an Authorization header (leave blank for none)
+enable_webhook_push: false
+webhook_push_url: ""
+webhook_push_auth_token: ""
 enable_twitter_push: false
 enable_bluesky_push: false
 enable_mastodon_push: false

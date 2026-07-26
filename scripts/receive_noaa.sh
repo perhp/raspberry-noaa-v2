@@ -410,6 +410,12 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
     ${PUSH_PROC_DIR}/push_telegram.sh "${push_annotation}" $push_file_list >> $NOAA_LOG 2>&1
   fi
 
+  # handle generic webhook pushing if enabled
+  if [ "${ENABLE_WEBHOOK_PUSH}" == "true" ]; then
+    log "Pushing capture event to webhook" "INFO"
+    ${PUSH_PROC_DIR}/push_webhook.sh "${pass_id}" "${daylight}" $push_file_list >> $NOAA_LOG 2>&1
+  fi
+
   if [ "${ENABLE_EMAIL_PUSH}" == "true" ]; then
     IFS=' ' read -ra image_file_array <<< "$push_file_list"
     for i in "${image_file_array[@]}"; do
