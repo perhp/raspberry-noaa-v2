@@ -21,7 +21,8 @@
 - name: Check if systemd-timesyncd service exists
   become: yes
   command: systemctl status systemd-timesyncd
-  ignore_errors: yes
+  failed_when: false
+  changed_when: false
   register: timesyncd_status
 
 - name: Stop and disable systemd-timesyncd if it exists

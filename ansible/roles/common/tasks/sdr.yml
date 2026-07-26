@@ -118,10 +118,12 @@
   command: ldconfig
   when: rtlsdr.changed
 
-- name: Unload kernel modules (ignore if error, that means the stock driver wasn't present which is good)
+- name: Unload kernel modules (non-zero rc just means the stock driver wasn't present, which is good)
   become: yes
   command: modprobe -r msi2500 msi001
-  ignore_errors: yes  # Ignore errors if the modules are not loaded
+  register: msi_unload
+  failed_when: false
+  changed_when: msi_unload.rc == 0
 
 - name: copy RTL-SDR udev rules
   become: yes
