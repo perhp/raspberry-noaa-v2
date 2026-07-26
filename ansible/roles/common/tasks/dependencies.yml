@@ -388,6 +388,23 @@
     chdir: /home/{{ target_user }}/MeteorDemod
   when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
 
+# Upstream MeteorDemod is missing <cstdint> includes that gcc 14 (Trixie) no
+# longer provides transitively - uint32_t fails to resolve without these.
+# lineinfile is idempotent, so this is a no-op once upstream fixes it.
+- name: Patch MeteorDemod agc.h for gcc 14 (missing cstdint include)
+  lineinfile:
+    path: /home/{{ target_user }}/MeteorDemod/DSP/agc.h
+    insertafter: '^#include <complex>'
+    line: '#include <cstdint>'
+  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
+
+- name: Patch MeteorDemod iqsource.h for gcc 14 (missing cstdint include)
+  lineinfile:
+    path: /home/{{ target_user }}/MeteorDemod/DSP/iqsource.h
+    insertafter: '^#define IQSOURCE_H'
+    line: '#include <cstdint>'
+  when: meteor_demod_installed.stat.exists is not defined or meteor_demod_installed.stat.exists == False
+
 - name: Create build directory
   file:
     path: /home/{{ target_user }}/MeteorDemod/build
