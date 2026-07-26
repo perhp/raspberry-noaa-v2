@@ -50,6 +50,14 @@
     special_time: reboot
     job: "{{ noaa_home }}/scripts/tools/scratch_perms.sh"
 
+# the watchdog itself no-ops unless enable_health_watchdog is true, so the
+# cron entry can be installed unconditionally
+- name: create health watchdog cron job
+  cron:
+    name: station health watchdog
+    minute: 30
+    job: "{{ noaa_home }}/scripts/tools/health_watchdog.sh"
+
 - name: create database
   shell: "/usr/bin/sqlite3 {{ noaa_home }}/db/panel.db < {{ noaa_home }}/db_migrations/00_seed_schema.sql"
   args:

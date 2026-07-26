@@ -190,7 +190,17 @@
     "telegram_chat_id":           { "type": "string" },
     "enable_webhook_push":        { "type": "boolean" },
     "webhook_push_url":           { "type": "string" },
-    "webhook_push_auth_token":    { "type": "string" }
+    "webhook_push_auth_token":    { "type": "string" },
+    "enable_health_watchdog":     { "type": "boolean" },
+    "watchdog_max_hours_without_capture": {
+      "type": "number",
+      "minimum": 1
+    },
+    "watchdog_disk_usage_threshold": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 100
+    }
   },
   "required": [
     "latitude",
@@ -297,5 +307,8 @@
     "telegram_chat_id",
     "enable_webhook_push",
     "webhook_push_url",
-    "webhook_push_auth_token"]
+    "webhook_push_auth_token",
+    "enable_health_watchdog",
+    "watchdog_max_hours_without_capture",
+    "watchdog_disk_usage_threshold"]
 }

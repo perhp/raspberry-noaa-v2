@@ -195,6 +195,16 @@ enable_coronal: false
 # in the passes view
 enable_solar_terminator: true
 
+# station health watchdog - hourly cron check that alerts through the enabled
+# push channels (Telegram, Discord, Pushover, Slack, webhook) when the station
+# stops producing captures, disk fills up, no passes are scheduled, or the
+# RTL-SDR disappears from USB; alerts always also land in the log
+#   watchdog_max_hours_without_capture - alert when no capture succeeded for this many hours
+#   watchdog_disk_usage_threshold - alert when image storage disk usage reaches this percentage
+enable_health_watchdog: true
+watchdog_max_hours_without_capture: 48
+watchdog_disk_usage_threshold: 90
+
 # operating system configurations
 #   disable_wifi_power_mgmt - if running wireless internet and you want to
 #       disable "sleep" mode of your wifi device (assuming it's wlan0), set

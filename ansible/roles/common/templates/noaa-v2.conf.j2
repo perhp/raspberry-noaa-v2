@@ -139,6 +139,11 @@ ENABLE_WEBHOOK_PUSH={{ enable_webhook_push|lower }}
 WEBHOOK_PUSH_URL='{{ webhook_push_url }}'
 WEBHOOK_PUSH_AUTH_TOKEN='{{ webhook_push_auth_token }}'
 
+# Station Health Watchdog
+ENABLE_HEALTH_WATCHDOG={{ enable_health_watchdog|lower }}
+WATCHDOG_MAX_HOURS_WITHOUT_CAPTURE={{ watchdog_max_hours_without_capture }}
+WATCHDOG_DISK_USAGE_THRESHOLD={{ watchdog_disk_usage_threshold }}
+
 # Network Time Protocol
 NTP_SERVER={{ ntp_server }}
 
