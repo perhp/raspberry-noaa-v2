@@ -35,6 +35,7 @@ class Stat extends \Lib\Model {
                                            round(avg(predict_passes.max_elev), 1) AS avg_elev,
                                            round(avg(decoded_passes.max_snr), 1) AS avg_snr,
                                            round(max(decoded_passes.max_snr), 1) AS best_snr,
+                                           round(avg(predict_passes.frame_loss_pct), 1) AS avg_frame_loss,
                                            max(decoded_passes.pass_start) AS last_capture
                                     FROM decoded_passes
                                     INNER JOIN predict_passes

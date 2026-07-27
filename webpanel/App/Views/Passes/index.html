@@ -63,12 +63,13 @@
           <th>{{ lang['max_elev'] }}</th>
           <th class="center hide-sm">{{ lang['pass_start_azimuth'] }}</th>
           <th class="center hide-sm">{{ lang['travel_direction'] }}</th>
+          <th class="center hide-sm">{{ lang.frame_yield|default('Frames') }}</th>
         </tr>
       </thead>
       <tbody>
         {# rows are rendered client-side from /passes/status #}
         <tr>
-          <td colspan="7" class="no-passes">&#8230;</td>
+          <td colspan="8" class="no-passes">&#8230;</td>
         </tr>
       </tbody>
     </table>
@@ -115,6 +116,30 @@
         return '<span class="lamp lamp-' + kind + '" title="' + esc(title || lampTitles[kind]) + '">' + lampIcons[kind] + '</span>';
       }
 
+      {# frame yield: how much of what the spacecraft sent actually reached us.
+         Null for NOAA APT passes (no frames) and for anything captured before
+         the metric existed, so those render as an em dash rather than 0%. #}
+      var frameLabels = {
+        received: "{{ lang.frames_received|default('Frames received')|e('js') }}",
+        loss: "{{ lang.frame_loss|default('Frame loss')|e('js') }}",
+        gap: "{{ lang.largest_frame_gap|default('Largest gap')|e('js') }}"
+      };
+
+      function frameCell(p) {
+        if (p.frames_received === null || p.frames_received === undefined || p.frames_received === '') {
+          return '<span class="faint">&mdash;</span>';
+        }
+        var loss = Number(p.frame_loss_pct);
+        var kind = loss >= 40 ? 'bad' : (loss >= 10 ? 'warn' : 'good');
+        var title = frameLabels.received + ': ' + p.frames_received + '/' + p.frames_expected + '\n' +
+                    frameLabels.loss + ': ' + loss.toFixed(1) + '%\n' +
+                    frameLabels.gap + ': ' + p.largest_frame_gap;
+        return '<span class="elev-gauge frame-gauge ' + kind + '" title="' + esc(title) + '">' +
+                 '<span class="num">' + Math.round(loss) + '%</span>' +
+                 '<i style="--yield: ' + Math.max(0, Math.round(100 - loss)) + '%"><b></b></i>' +
+               '</span>';
+      }
+
       function lampFor(p, now, prevEnd) {
         if (p.id) return lamp('done');
         if (p.status === 'failed') return lamp('failed', lampTitles.failed + (p.error_text ? ': ' + p.error_text : ''));
@@ -130,13 +155,13 @@
         var now = d.server_time;
         var rows = [];
         if (!d.passes.length) {
-          rows.push('<tr><td colspan="7" class="no-passes">0 {{ lang['passes']|e('js') }}</td></tr>');
+          rows.push('<tr><td colspan="8" class="no-passes">0 {{ lang['passes']|e('js') }}</td></tr>');
         }
         var lastDate = null;
         var prevEnd = 0;
         d.passes.forEach(function(p) {
           if (p.date_key !== lastDate) {
-            rows.push('<tr class="date-separator"><td colspan="7">' + esc(p.date_label) + '</td></tr>');
+            rows.push('<tr class="date-separator"><td colspan="8">' + esc(p.date_label) + '</td></tr>');
             lastDate = p.date_key;
           }
           var inactive = (!p.is_active || p.pass_end < now) && p.status !== 'capturing' && p.status !== 'processing';
@@ -158,6 +183,7 @@
             '</span></td>' +
             '<td class="center num hide-sm">' + (p.pass_start_azimuth === '' || p.pass_start_azimuth === null ? '' : p.pass_start_azimuth + '&#176;') + '</td>' +
             '<td class="center num hide-sm">' + (p.direction ? esc(p.direction) : '') + '</td>' +
+            '<td class="center num hide-sm">' + frameCell(p) + '</td>' +
             '</tr>');
           prevEnd = p.pass_end;
         });

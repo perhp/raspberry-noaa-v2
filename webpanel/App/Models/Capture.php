@@ -11,6 +11,10 @@ class Capture extends \Lib\Model {
   public $gain;
   public $max_snr;
   public $avg_snr;
+  public $frames_received;
+  public $frames_expected;
+  public $frame_loss_pct;
+  public $largest_frame_gap;
   public $sat_list;
 
   # build the WHERE clause for the gallery filters (satellite, day/night,
@@ -55,7 +59,11 @@ class Capture extends \Lib\Model {
                                              predict_passes.max_elev,
                                              predict_passes.pass_start_azimuth,
                                              predict_passes.direction,
-                                             predict_passes.azimuth_at_max
+                                             predict_passes.azimuth_at_max,
+                                             predict_passes.frames_received,
+                                             predict_passes.frames_expected,
+                                             predict_passes.frame_loss_pct,
+                                             predict_passes.largest_frame_gap
                                              FROM decoded_passes
                                              INNER JOIN predict_passes
                                                ON predict_passes.pass_start = decoded_passes.pass_start"
@@ -200,6 +208,29 @@ class Capture extends \Lib\Model {
 
     $this->max_snr = $row['max_snr'];
     $this->avg_snr = $row['avg_snr'];
+  }
+
+  # get the CADU frame reception metrics for the specific capture (null for
+  # NOAA APT captures, which have no frames, and for captures that predate
+  # the metrics) - these live on predict_passes so that failed captures,
+  # which never get a decoded_passes row, carry them too
+  public function getFrameStats($id) {
+    $query = $this->db_conn->prepare('SELECT predict_passes.frames_received,
+                                             predict_passes.frames_expected,
+                                             predict_passes.frame_loss_pct,
+                                             predict_passes.largest_frame_gap
+                                      FROM decoded_passes
+                                      INNER JOIN predict_passes
+                                        ON predict_passes.pass_start = decoded_passes.pass_start
+                                      WHERE decoded_passes.id = ?;');
+    $query->bindValue(1, $id);
+    $result = $query->execute();
+    $row = $result->fetchArray();
+
+    $this->frames_received = $row === false ? null : $row['frames_received'];
+    $this->frames_expected = $row === false ? null : $row['frames_expected'];
+    $this->frame_loss_pct = $row === false ? null : $row['frame_loss_pct'];
+    $this->largest_frame_gap = $row === false ? null : $row['largest_frame_gap'];
   }
 
   # get the epoch start time for the capture

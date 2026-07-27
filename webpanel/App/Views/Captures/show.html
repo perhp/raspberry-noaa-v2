@@ -36,6 +36,17 @@
               <dt>{{ lang.avg_snr|default('Avg SNR') }}</dt>
               <dd>{{ capture.avg_snr }} dB</dd>
             {% endif %}
+
+            {% if capture.frames_received is not null and capture.frames_received != '' %}
+              <dt>{{ lang.frames_received|default('Frames received') }}</dt>
+              <dd>{{ capture.frames_received }} / {{ capture.frames_expected }}</dd>
+
+              <dt>{{ lang.frame_loss|default('Frame loss') }}</dt>
+              <dd>{{ capture.frame_loss_pct|round(1) }}%</dd>
+
+              <dt>{{ lang.largest_frame_gap|default('Largest gap') }}</dt>
+              <dd>{{ capture.largest_frame_gap }}</dd>
+            {% endif %}
           </dl>
         </div>
       </div>

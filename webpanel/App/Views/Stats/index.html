@@ -57,6 +57,7 @@
           <th class="center">{{ lang.avg_elev|default('Avg Elevation') }}</th>
           <th class="center">{{ lang.avg_snr|default('Avg SNR') }}</th>
           <th class="center">{{ lang.best_snr|default('Best SNR') }}</th>
+          <th class="center">{{ lang.avg_frame_loss|default('Avg Frame Loss') }}</th>
           <th class="center hide-sm">{{ lang.last_capture|default('Last Capture') }}</th>
         </tr>
       </thead>
@@ -68,11 +69,12 @@
             <td class="center num">{{ row.avg_elev }}&#176;</td>
             <td class="center num">{% if row.avg_snr is not null %}{{ row.avg_snr }} dB{% else %}&mdash;{% endif %}</td>
             <td class="center num">{% if row.best_snr is not null %}{{ row.best_snr }} dB{% else %}&mdash;{% endif %}</td>
+            <td class="center num">{% if row.avg_frame_loss is not null %}{{ row.avg_frame_loss }}%{% else %}&mdash;{% endif %}</td>
             <td class="center num hide-sm">{{ row.last_capture|date(constant('Config\\Config::DATETIME_FORMAT')) }}</td>
           </tr>
         {% else %}
           <tr>
-            <td colspan="6" class="no-passes">{{ lang.no_captures_yet|default('No captures yet.') }}</td>
+            <td colspan="7" class="no-passes">{{ lang.no_captures_yet|default('No captures yet.') }}</td>
           </tr>
         {% endfor %}
       </tbody>
