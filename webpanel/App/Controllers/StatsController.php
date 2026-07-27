@@ -15,23 +15,38 @@ class StatsController extends \Lib\Controller {
     $sky_map_file = Config::IMAGE_PATH . '/sky-quality-map.png';
     $sky_map_exists = file_exists($sky_map_file);
 
-    # newest daily timelapse GIF, if the feature is producing them - the
-    # date-stamped filenames sort chronologically
-    $timelapse_file = '';
-    $timelapses = glob(Config::IMAGE_PATH . '/timelapse-*.gif');
-    if ($timelapses !== false && count($timelapses) > 0) {
-      sort($timelapses);
-      $timelapse_file = basename(end($timelapses));
-    }
-
     $args = array_merge($args, array(
       'stat' => $stat,
       'sky_map_exists' => $sky_map_exists,
       'sky_map_mtime' => $sky_map_exists ? filemtime($sky_map_file) : 0,
-      'timelapse_file' => $timelapse_file,
+      'timelapse_files' => $this->newestPerVariant('/timelapse-*.gif', '/^timelapse-\d{8}(?:-(.+))?\.gif$/'),
+      'mosaic_files' => $this->newestPerVariant('/mosaic-*.jpg', '/^mosaic-\d{8}-(.+)\.jpg$/'),
     ));
 
     View::renderTemplate('Stats/index.html', $args);
+  }
+
+  # map of projection variant => newest matching file, for the daily artifacts
+  # the best of day job builds. Both are named <kind>-YYYYMMDD-<variant>.<ext>,
+  # so the date-stamped names sort chronologically and the last one seen for a
+  # variant is its most recent. Timelapses produced before the per-projection
+  # naming carry no variant and are keyed by an empty string.
+  private function newestPerVariant($glob_pattern, $name_pattern) {
+    $newest = array();
+    $files = glob(Config::IMAGE_PATH . $glob_pattern);
+    if ($files === false) {
+      return $newest;
+    }
+
+    sort($files);
+    foreach ($files as $file) {
+      if (preg_match($name_pattern, basename($file), $matches)) {
+        $newest[isset($matches[1]) ? $matches[1] : ''] = basename($file);
+      }
+    }
+    ksort($newest);
+
+    return $newest;
   }
 }
 

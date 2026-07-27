@@ -67,8 +67,8 @@
     hour: 0
     job: "{{ noaa_home }}/scripts/tools/sky_quality_map.sh"
 
-# the script no-ops unless enable_best_of_day_push or enable_daily_timelapse
-# is true, so the cron entry can be installed unconditionally
+# the script no-ops unless enable_best_of_day_push, enable_daily_timelapse or
+# enable_daily_mosaic is true, so the cron entry can be installed unconditionally
 - name: create best of day cron job
   cron:
     name: daily best capture summary push

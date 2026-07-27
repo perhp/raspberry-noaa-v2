@@ -3,8 +3,9 @@
 # Purpose: Once a day (evening cron), pick the best capture of the day -
 #          ranked by peak SNR, falling back to max elevation - and push a
 #          single summary post through the enabled push channels. Optionally
-#          also assembles an animated timelapse GIF from the day's
-#          equirectangular Meteor projections and attaches it.
+#          also assembles an animated timelapse GIF from the day's Meteor
+#          projections, and mosaics that blend every pass of a given projection
+#          into one wide-coverage image, attaching both.
 #
 # This complements (or replaces) per-pass pushing: users who find per-pass
 # posts too noisy can disable those and enable only this daily summary.
@@ -13,12 +14,58 @@
 . "$HOME/.noaa-v2.conf"
 . "$NOAA_HOME/scripts/common.sh"
 
-if [ "${ENABLE_BEST_OF_DAY_PUSH}" != "true" ] && [ "${ENABLE_DAILY_TIMELAPSE}" != "true" ]; then
+if [ "${ENABLE_BEST_OF_DAY_PUSH}" != "true" ] && [ "${ENABLE_DAILY_TIMELAPSE}" != "true" ] && \
+   [ "${ENABLE_DAILY_MOSAIC}" != "true" ]; then
   exit 0
 fi
 
 today=$(date '+%Y-%m-%d')
 day_start=$(date -d "${today} 00:00:00" '+%s')
+day_end=$(date -d "${today} 00:00:00 + 1 day" '+%s')
+
+# echo the day's images for one projection suffix, one path per line, in pass
+# order - optionally leaving out passes whose peak SNR fell below $2 dB, and
+# night passes when $3 is true. The pass list comes from the database rather
+# than from file mtimes so that a pass which finished processing after midnight
+# still counts towards the day it was received, and so the SNR and daylight flag
+# are available to filter on.
+# turn an image suffix into the name used for the artifacts built from it,
+# e.g. -321_projected.jpg -> 321_projected
+projection_variant() {
+  local variant="${1#-}"
+  echo "${variant%.*}"
+}
+
+collect_frames() {
+  local suffix="$1"
+  local min_snr="$2"
+  local daylight_only="$3"
+  local filters=""
+  local file_path
+
+  # passes without an SNR reading are never filtered out, matching how the
+  # push quality gate treats them
+  if [ -n "$min_snr" ] && awk -v v="$min_snr" 'BEGIN { exit !(v + 0 > 0) }'; then
+    filters="${filters} AND (max_snr IS NULL OR max_snr >= ${min_snr})"
+  fi
+
+  # opt-in: a twilight pass of a visible-light composite can still carry real
+  # detail (more so at high latitudes in summer), so night passes contribute
+  # their coverage by default - this exists for stations where the night frames
+  # are dark enough that the brightest-pixel blend picks up their noise instead
+  if [ "$daylight_only" == "true" ]; then
+    filters="${filters} AND daylight_pass = 1"
+  fi
+
+  $SQLITE3 -cmd ".timeout 30000" "$DB_FILE" \
+    "SELECT file_path FROM decoded_passes \
+     WHERE pass_start >= ${day_start} AND pass_start < ${day_end} ${filters} \
+     ORDER BY pass_start;" | while read -r file_path; do
+    if [ -f "${IMAGE_OUTPUT}/${file_path}${suffix}" ]; then
+      echo "${IMAGE_OUTPUT}/${file_path}${suffix}"
+    fi
+  done
+}
 
 push_file_list=""
 annotation="Daily summary ${today}"
@@ -77,20 +124,59 @@ if [ "${ENABLE_BEST_OF_DAY_PUSH}" == "true" ]; then
   fi
 fi
 
-# --- daily timelapse from equirectangular Meteor projections ---
+# --- daily timelapses, one per projection, frames in pass order ---
 if [ "${ENABLE_DAILY_TIMELAPSE}" == "true" ]; then
-  mapfile -t frames < <(find "${IMAGE_OUTPUT}" -maxdepth 1 -type f -name "*${DAILY_TIMELAPSE_SUFFIX}" -newermt "${today} 00:00:00" | sort)
-  if [ "${#frames[@]}" -ge 2 ]; then
-    timelapse="${IMAGE_OUTPUT}/timelapse-$(date '+%Y%m%d').gif"
-    log "Building daily timelapse from ${#frames[@]} frames" "INFO"
+  for timelapse_suffix in ${DAILY_TIMELAPSE_SUFFIXES}; do
+    # a timelapse is a record of the day as it was received, so every pass is a
+    # frame - including night ones, which simply show up dark
+    mapfile -t frames < <(collect_frames "${timelapse_suffix}" 0 false)
+    variant=$(projection_variant "${timelapse_suffix}")
+
+    if [ "${#frames[@]}" -lt 2 ]; then
+      log "Daily timelapse: only ${#frames[@]} frame(s) with suffix ${timelapse_suffix} today - skipping" "INFO"
+      continue
+    fi
+
+    timelapse="${IMAGE_OUTPUT}/timelapse-$(date '+%Y%m%d')-${variant}.gif"
+    log "Building daily ${variant} timelapse from ${#frames[@]} frames" "INFO"
     $CONVERT -delay 80 -loop 0 "${frames[@]}" -resize 800x "$timelapse" >> $NOAA_LOG 2>&1
     if [ -f "$timelapse" ]; then
       push_file_list="${push_file_list} ${timelapse}"
-      annotation="${annotation} | Timelapse: ${#frames[@]} passes"
+      annotation="${annotation} | Timelapse ${variant}: ${#frames[@]} passes"
+    else
+      log "Daily timelapse: failed to build ${timelapse}" "WARN"
     fi
-  else
-    log "Daily timelapse: only ${#frames[@]} frame(s) with suffix ${DAILY_TIMELAPSE_SUFFIX} today - skipping" "INFO"
-  fi
+  done
+fi
+
+# --- daily mosaics: every pass of a projection blended into one image ---
+#
+# SatDump renders each projection onto a fixed grid defined in its config - the
+# stereographic one centred on the station, the equirectangular one covering a
+# fixed window around it - so the same projection from different passes is
+# already pixel-aligned and needs no warping here. Compositing with "lighten"
+# keeps the brightest pixel at each position, which is the imaged swath wherever
+# another frame only has empty (black) canvas.
+if [ "${ENABLE_DAILY_MOSAIC}" == "true" ]; then
+  for mosaic_suffix in ${DAILY_MOSAIC_SUFFIXES}; do
+    mapfile -t frames < <(collect_frames "${mosaic_suffix}" "${DAILY_MOSAIC_MIN_SNR}" "${DAILY_MOSAIC_DAYLIGHT_ONLY}")
+    variant=$(projection_variant "${mosaic_suffix}")
+
+    if [ "${#frames[@]}" -lt 2 ]; then
+      log "Daily mosaic: only ${#frames[@]} usable frame(s) with suffix ${mosaic_suffix} today - skipping" "INFO"
+      continue
+    fi
+
+    mosaic="${IMAGE_OUTPUT}/mosaic-$(date '+%Y%m%d')-${variant}.jpg"
+    log "Building daily ${variant} mosaic from ${#frames[@]} passes" "INFO"
+    $CONVERT "${frames[@]}" -background black -compose lighten -flatten "$mosaic" >> $NOAA_LOG 2>&1
+    if [ -f "$mosaic" ]; then
+      push_file_list="${push_file_list} ${mosaic}"
+      annotation="${annotation} | Mosaic ${variant}: ${#frames[@]} passes"
+    else
+      log "Daily mosaic: failed to build ${mosaic}" "WARN"
+    fi
+  done
 fi
 
 if [ -z "$push_file_list" ]; then
