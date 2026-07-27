@@ -1,10 +1,5 @@
 {% extends "base.html" %}
 
-{% block head_extra %}
-  {# keep the pass status lamps and solar terminator current on wall displays #}
-  <meta http-equiv="refresh" content="300">
-{% endblock %}
-
 {% block body %}
   <div class="panel-label">
     <h2>{{ lang.live_status|default('Live status') }}</h2>
@@ -71,82 +66,10 @@
         </tr>
       </thead>
       <tbody>
-        {% set now_ms = 'now'|date('U') %}
-        {% set cur_date = now_ms|date('m/d/y') %}
-        {% set last_date = 0 %}
-
-        {% if pass.list|length <= 0 %}
-          <tr>
-            <td colspan="7" class="no-passes">0 {{ lang['passes'] }}</td>
-          </tr>
-        {% else %}
-          {% for pass in pass.list %}
-            {% set pass_start = pass.pass_start|date('H:i:s') %}
-            {% set pass_end = pass.pass_end|date('H:i:s') %}
-            {% set cur_date = pass.pass_start|date('m/d/y') %}
-            {% set pass_end_ms = pass.pass_end|date('U') %}
-
-            {% if last_date < cur_date %}
-              <tr class="date-separator">
-                <td colspan="7">{{ cur_date|date(constant('Config\\Config::PASSES_DATE_FORMAT')) }}</td>
-              </tr>
-              {% set last_date = cur_date %}
-            {% endif %}
-
-            <tr{% if (pass.is_active == false or pass_end_ms < now_ms) and pass.status != 'capturing' and pass.status != 'processing' %} class="inactive"{% endif %}>
-              <td class="center">
-                {% if pass.id %}
-                  <span class="lamp lamp-done" title="{{ lang['completed_pass'] }}">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7-8"/></svg>
-                  </span>
-                {% elseif pass.status == 'failed' %}
-                  <span class="lamp lamp-failed" title="{{ lang['failed_pass'] }}{% if pass.error_text %}: {{ pass.error_text }}{% endif %}">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
-                  </span>
-                {% elseif now_ms > pass.pass_start and now_ms < pass.pass_end %}
-                  <span class="lamp lamp-running" title="{{ lang['running_pass'] }}">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" fill="currentColor"/></svg>
-                  </span>
-                {% elseif pass.status == 'capturing' or pass.status == 'processing' %}
-                  <span class="lamp lamp-processing" title="{{ lang['processing_pass'] }}">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>
-                  </span>
-                {% elseif prev_pass_end >= pass.pass_start %}
-                  <span class="lamp lamp-conflict" title="{{ lang['conflicting_pass'] }}">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5L14.5 13.5H1.5z"/><path d="M8 7v3"/><path d="M8 12v.01"/></svg>
-                  </span>
-                {% elseif now_ms < pass.pass_start %}
-                  <span class="lamp lamp-next" title="{{ lang['next_pass'] }}">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2.5 1.5"/></svg>
-                  </span>
-                {% else %}
-                  <span class="lamp lamp-missed" title="{{ lang['no_capture_pass'] }}">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
-                  </span>
-                {% endif %}
-              </td>
-              <td>
-                {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}
-                  <a href='https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&tags=Weather&sat={{ pass.sat_name }}&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}' target='satvis'>{{ pass.sat_name }}</a>
-                {% else %}
-                  {{ pass.sat_name }}
-                {% endif %}
-              </td>
-              <td class="center num">{{ pass_start }}</td>
-              <td class="center num">{{ pass_end }}</td>
-              <td>
-                <span class="elev-gauge{% if pass.max_elev >= 60 %} prime{% endif %}">
-                  <span class="num">{{ pass.max_elev }}&#176;{% if pass.azimuth_at_max != "" %}{% if pass.azimuth_at_max >= 0 and pass.azimuth_at_max <= 180 %}E{% else %}W{% endif %}{% endif %}</span>
-                  <i style="--elev: {{ ((pass.max_elev / 90) * 100)|round }}%"><b></b></i>
-                </span>
-              </td>
-              <td class="center num hide-sm">{% if pass.pass_start_azimuth != "" %}{{ pass.pass_start_azimuth }}&#176;{% endif %}</td>
-              <td class="center num hide-sm">{% if pass.direction != "" %}{{ pass.direction }}{% endif %}</td>
-            </tr>
-
-            {% set prev_pass_end = pass.pass_end %}
-          {% endfor %}
-        {% endif %}
+        {# rows are rendered client-side from /passes/status #}
+        <tr>
+          <td colspan="7" class="no-passes">&#8230;</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -157,10 +80,89 @@
       var logEl = document.getElementById('live-log');
       var termEl = document.getElementById('live-term');
       var connEl = document.getElementById('term-conn');
+      var tableEl = document.querySelector('#passes tbody');
+      var satvisBase = {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}'https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&tags=Weather&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&sat='{% else %}null{% endif %};
       var stateLabels = {
         capturing: "{{ lang['running_pass']|e('js') }}",
         processing: "{{ lang['processing_pass']|e('js') }}"
       };
+      var lampTitles = {
+        done: "{{ lang['completed_pass']|e('js') }}",
+        failed: "{{ lang['failed_pass']|e('js') }}",
+        running: "{{ lang['running_pass']|e('js') }}",
+        processing: "{{ lang['processing_pass']|e('js') }}",
+        conflict: "{{ lang['conflicting_pass']|e('js') }}",
+        next: "{{ lang['next_pass']|e('js') }}",
+        missed: "{{ lang['no_capture_pass']|e('js') }}"
+      };
+      var lampIcons = {
+        done: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7-8"/></svg>',
+        failed: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+        running: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" fill="currentColor"/></svg>',
+        processing: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>',
+        conflict: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5L14.5 13.5H1.5z"/><path d="M8 7v3"/><path d="M8 12v.01"/></svg>',
+        next: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2.5 1.5"/></svg>',
+        missed: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>'
+      };
+
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, function(c) {
+          return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+        });
+      }
+
+      function lamp(kind, title) {
+        return '<span class="lamp lamp-' + kind + '" title="' + esc(title || lampTitles[kind]) + '">' + lampIcons[kind] + '</span>';
+      }
+
+      function lampFor(p, now, prevEnd) {
+        if (p.id) return lamp('done');
+        if (p.status === 'failed') return lamp('failed', lampTitles.failed + (p.error_text ? ': ' + p.error_text : ''));
+        if (now > p.pass_start && now < p.pass_end) return lamp('running');
+        if (p.status === 'capturing' || p.status === 'processing') return lamp('processing');
+        if (prevEnd >= p.pass_start) return lamp('conflict');
+        if (now < p.pass_start) return lamp('next');
+        return lamp('missed');
+      }
+
+      function renderPasses(d) {
+        if (!d.passes) return;
+        var now = d.server_time;
+        var rows = [];
+        if (!d.passes.length) {
+          rows.push('<tr><td colspan="7" class="no-passes">0 {{ lang['passes']|e('js') }}</td></tr>');
+        }
+        var lastDate = null;
+        var prevEnd = 0;
+        d.passes.forEach(function(p) {
+          if (p.date_key !== lastDate) {
+            rows.push('<tr class="date-separator"><td colspan="7">' + esc(p.date_label) + '</td></tr>');
+            lastDate = p.date_key;
+          }
+          var inactive = (!p.is_active || p.pass_end < now) && p.status !== 'capturing' && p.status !== 'processing';
+          var sat = satvisBase
+            ? '<a href="' + esc(satvisBase + encodeURIComponent(p.sat_name)) + '" target="satvis">' + esc(p.sat_name) + '</a>'
+            : esc(p.sat_name);
+          var ew = '';
+          if (p.azimuth_at_max !== '' && p.azimuth_at_max !== null) {
+            ew = (p.azimuth_at_max >= 0 && p.azimuth_at_max <= 180) ? 'E' : 'W';
+          }
+          rows.push('<tr' + (inactive ? ' class="inactive"' : '') + '>' +
+            '<td class="center">' + lampFor(p, now, prevEnd) + '</td>' +
+            '<td>' + sat + '</td>' +
+            '<td class="center num">' + esc(p.start_label) + '</td>' +
+            '<td class="center num">' + esc(p.end_label) + '</td>' +
+            '<td><span class="elev-gauge' + (p.max_elev >= 60 ? ' prime' : '') + '">' +
+              '<span class="num">' + p.max_elev + '&#176;' + ew + '</span>' +
+              '<i style="--elev: ' + Math.round((p.max_elev / 90) * 100) + '%"><b></b></i>' +
+            '</span></td>' +
+            '<td class="center num hide-sm">' + (p.pass_start_azimuth === '' || p.pass_start_azimuth === null ? '' : p.pass_start_azimuth + '&#176;') + '</td>' +
+            '<td class="center num hide-sm">' + (p.direction ? esc(p.direction) : '') + '</td>' +
+            '</tr>');
+          prevEnd = p.pass_end;
+        });
+        tableEl.innerHTML = rows.join('');
+      }
 
       function fmtTime(epoch) {
         return new Date(epoch * 1000).toLocaleTimeString();
@@ -177,6 +179,7 @@
 
       function refresh() {
         fetch('/passes/status').then(function(r) { return r.json(); }).then(function(d) {
+          renderPasses(d);
           termEl.classList.toggle('rec', !!d.current);
           connEl.innerHTML = d.current ? '&#9679; REC' : '&#9675; IDLE';
           if (d.current) {
@@ -203,7 +206,17 @@
       }
 
       refresh();
-      setInterval(refresh, 10000);
+      setInterval(refresh, 5000);
+
+      {# the page no longer reloads itself, so cache-bust the external
+         imagery (solar terminator, coronal cams) every 5 minutes instead #}
+      setInterval(function() {
+        document.querySelectorAll('.instrument-body img').forEach(function(img) {
+          var base = img.dataset.src || img.src;
+          img.dataset.src = base;
+          img.src = base + (base.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+        });
+      }, 300000);
     })();
   </script>
 

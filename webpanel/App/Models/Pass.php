@@ -28,7 +28,7 @@ class Pass extends \Lib\Model {
 
     $passes = [];
     $i = 0;
-    while ($row = $query->fetchArray()) {
+    while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
       $passes[$i] = $row;
       $i++;
     }

@@ -7,13 +7,11 @@ use Config\Config;
 
 class PassesController extends \Lib\Controller {
   public function indexAction($args) {
-    $pass = $this->loadModel('Pass');
-    $pass->getList();
-    $args = array_merge($args, array('pass' => $pass));
     View::renderTemplate('Passes/index.html', $args);
   }
 
-  # JSON endpoint polled by the live status banner on the passes page
+  # JSON endpoint polled by the passes page: live status banner, log tail,
+  # and the full pass schedule (rendered client-side)
   public function statusAction($args) {
     $pass = $this->loadModel('Pass');
     $current = $pass->getCurrentCapture();
@@ -24,11 +22,24 @@ class PassesController extends \Lib\Controller {
       $log_tail = $this->tailLog(12);
     }
 
+    # date/time labels are formatted here so the browser shows server-local
+    # times in the configured format
+    $pass->getList();
+    $passes = array();
+    foreach ($pass->list as $row) {
+      $row['date_key'] = date('m/d/y', $row['pass_start']);
+      $row['date_label'] = date(Config::PASSES_DATE_FORMAT, $row['pass_start']);
+      $row['start_label'] = date('H:i:s', $row['pass_start']);
+      $row['end_label'] = date('H:i:s', $row['pass_end']);
+      $passes[] = $row;
+    }
+
     header('Content-Type: application/json');
     echo json_encode(array(
       'server_time' => time(),
       'current' => $current,
       'next' => $pass->getNextPass(),
+      'passes' => $passes,
       'log_tail' => $log_tail,
     ));
   }
