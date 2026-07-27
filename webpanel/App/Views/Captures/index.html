@@ -88,6 +88,13 @@
             <dt>{{ lang.max_snr|default('Peak SNR') }}</dt>
             <dd>{{ capture.max_snr }} dB</dd>
           {% endif %}
+
+          {% if capture.frames_received is not null and capture.frames_received != '' %}
+            <dt>{{ lang.frame_loss|default('Frame loss') }}</dt>
+            <dd title="{{ capture.frames_received }}/{{ capture.frames_expected }} {{ lang.frames|default('frames') }}, {{ lang.largest_frame_gap|default('Largest gap') }}: {{ capture.largest_frame_gap }}">
+              {{ capture.frame_loss_pct|round(1) }}%
+            </dd>
+          {% endif %}
         </dl>
       </div>
     </div>

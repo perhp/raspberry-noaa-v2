@@ -522,6 +522,15 @@ table.telemetry tr.inactive .lamp-failed { opacity: 0.75; }
 
 .elev-gauge.prime i b { background: var(--amber); }
 
+/* Frame yield gauge: shares the elevation gauge's layout, but the bar shows
+   how much of the downlink actually reached us and is colored by loss */
+.frame-gauge .num { min-width: 2.6rem; }
+.frame-gauge i b { width: var(--yield, 0%); background: var(--green); }
+.frame-gauge.warn i b { background: var(--amber); }
+.frame-gauge.bad i b { background: var(--red); }
+
+.faint { color: var(--faint); }
+
 /* ------------------------------------------------------------------ */
 /* Capture gallery plates                                              */
 /* ------------------------------------------------------------------ */

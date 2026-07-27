@@ -50,6 +50,7 @@ class CapturesController extends \Lib\Controller {
     $capture->getImagePath($pass_id);
     $capture->getGain($pass_id);
     $capture->getSNR($pass_id);
+    $capture->getFrameStats($pass_id);
 
     $args = array_merge($args, array('capture' => $capture));
 

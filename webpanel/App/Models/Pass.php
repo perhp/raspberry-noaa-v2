@@ -19,6 +19,10 @@ class Pass extends \Lib\Model {
                                            predict_passes.direction,
                                            predict_passes.status,
                                            predict_passes.error_text,
+                                           predict_passes.frames_received,
+                                           predict_passes.frames_expected,
+                                           predict_passes.frame_loss_pct,
+                                           predict_passes.largest_frame_gap,
                                            decoded_passes.id
                                     FROM predict_passes
                                     LEFT JOIN decoded_passes

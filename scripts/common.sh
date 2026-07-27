@@ -67,6 +67,40 @@ extract_snr_stats() {
     | awk '{sum+=$1; n++; if(n==1 || $1>max) max=$1} END {if (n>0) printf "%.1f %.1f", max, sum/n}')"
 }
 
+# measure how many CADU frames actually reached us during the pass and record
+# them against predict_passes, setting FRAMES_RECEIVED / FRAMES_EXPECTED /
+# FRAME_LOSS_PCT / LARGEST_FRAME_GAP for the caller to log.
+#
+# These live on predict_passes rather than decoded_passes deliberately: a
+# capture that decoded no imagery never gets a decoded_passes row, and those
+# are exactly the passes where knowing the frame yield matters most. The
+# metrics are frame-based, so they only apply to the CADU decoders (Meteor
+# LRPT) - NOAA APT passes leave the columns NULL.
+set_pass_frame_stats() {
+  local cadu_file=$1
+  FRAMES_RECEIVED=""
+  FRAMES_EXPECTED=""
+  FRAME_LOSS_PCT=""
+  LARGEST_FRAME_GAP=""
+  [ -z "$EPOCH_START" ] && return 0
+
+  read -r FRAMES_RECEIVED FRAMES_EXPECTED FRAME_LOSS_PCT LARGEST_FRAME_GAP <<< \
+    "$("$PYTHON" "$SCRIPTS_DIR"/tools/cadu_stats.py "$cadu_file" 2>> "$NOAA_LOG")"
+
+  # a broken parse must not wipe the row or abort the capture
+  if ! [[ "$FRAMES_RECEIVED" =~ ^[0-9]+$ ]]; then
+    log "Could not measure CADU frame statistics for this pass" "ERROR"
+    return 0
+  fi
+
+  $SQLITE3 -cmd ".timeout 30000" "$DB_FILE" \
+    "UPDATE predict_passes SET frames_received = ${FRAMES_RECEIVED}, \
+                               frames_expected = ${FRAMES_EXPECTED}, \
+                               frame_loss_pct = ${FRAME_LOSS_PCT}, \
+                               largest_frame_gap = ${LARGEST_FRAME_GAP} \
+     WHERE pass_start = $EPOCH_START;" >> "$NOAA_LOG" 2>&1
+}
+
 # evaluate the social push quality gate and, when the capture fails it, turn
 # off the social push channels for the rest of this run so weak passes (low
 # elevation or poor SNR) don't get published; the generic webhook is exempt -

@@ -226,6 +226,13 @@ else
   cadu_produced=false
   log "SatDump did not produce a CADU file - capture likely failed (no signal, SDR busy or unplugged?)" "ERROR"
 fi
+
+# measure the frame yield before the recording can be deleted below - the
+# demodulator can report a healthy SNR while frames are quietly going missing,
+# so this is what distinguishes a fully decoded pass from a partial one
+set_pass_frame_stats "${RAMFS_AUDIO_BASE}.cadu"
+log "Frame yield for pass: ${FRAMES_RECEIVED:-0}/${FRAMES_EXPECTED:-0} CADUs, ${FRAME_LOSS_PCT:-100}% lost, largest gap ${LARGEST_FRAME_GAP:-0} frames" "INFO"
+
 capture_status="processing"
 set_pass_status "processing" ""
 
