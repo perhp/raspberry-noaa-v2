@@ -555,3 +555,6 @@ log "Total processing time: ${PROC_TIME}" "INFO"
 
 # refresh the sky quality map so it includes this pass (successful or not)
 ${SCRIPTS_DIR}/tools/sky_quality_map.sh
+
+# rebuild the day's mosaics and timelapses so they include this pass
+${SCRIPTS_DIR}/tools/daily_imagery.sh

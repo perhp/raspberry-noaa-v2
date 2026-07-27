@@ -228,16 +228,18 @@ disable_at_mail: false
 # (ranked by peak SNR, then max elevation) and pushes a single post through the
 # enabled push channels; a lower-noise alternative or complement to per-pass pushes
 #   enable_daily_timelapse - additionally build an animated GIF from the day's
-#        Meteor projections and attach it to the daily post
+#        Meteor projections and attach it to the daily post. Rebuilt at the end of
+#        every capture, so it grows through the day rather than appearing at 22:30
 #   daily_timelapse_suffixes - space-separated list of projections to animate, one
 #        GIF each (must match image suffixes produced by the decoder, e.g.
 #        -321_projected.jpg, -221_projected.jpg, -MCIR_projected.jpg; the
 #        -*_equirect_projected.jpg variants require meteor_create_equidistant_projection)
 #   enable_daily_mosaic - additionally combine the day's projections into a single
-#        wide-coverage image per suffix listed below; every projection of a given
-#        type is rendered onto the same fixed grid (both the stereographic and the
-#        equirectangular one are anchored on your station), so the passes need no
-#        alignment and are simply blended together
+#        wide-coverage image per suffix listed below, likewise rebuilt after every
+#        capture; every projection of a given type is rendered onto the same fixed
+#        grid (both the stereographic and the equirectangular one are anchored on
+#        your station), so the passes need no alignment and are simply blended
+#        together
 #   daily_mosaic_suffixes - space-separated list of projection suffixes to mosaic,
 #        each producing its own image
 #   daily_mosaic_min_snr - leave passes whose peak SNR is below this many dB out of
