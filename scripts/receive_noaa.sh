@@ -457,3 +457,6 @@ TIMER_END=$(date '+%s')
 DIFF=$(($TIMER_END - $TIMER_START))
 PROC_TIME=$(date -ud "@$DIFF" +'%H:%M.%S')
 log "Total processing time: ${PROC_TIME}" "INFO"
+
+# refresh the sky quality map so it includes this pass (successful or not)
+${SCRIPTS_DIR}/tools/sky_quality_map.sh

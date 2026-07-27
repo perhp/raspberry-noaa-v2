@@ -58,6 +58,8 @@
     minute: 30
     job: "{{ noaa_home }}/scripts/tools/health_watchdog.sh"
 
+# the receive scripts regenerate the map after every pass - this nightly run is
+# just a fallback that keeps the map's date current on days with no captures
 - name: create sky quality map cron job
   cron:
     name: regenerate reception quality sky map
