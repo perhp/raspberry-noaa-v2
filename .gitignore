@@ -10,3 +10,14 @@ config/settings.yml
 
 # python bytecode caches
 __pycache__/
+
+# SatDump scratch files. Captures run from 'at' jobs, which inherit the working
+# directory they were scheduled from - the repo, when schedule.sh is run from
+# here - so SatDump drops these in the repo root.
+/dataset.json
+/telemetry.json
+/product.cbor
+
+# timestamped backups left behind by the installer's in-place config scripts
+*.bak.*
+*.[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9]:[0-9][0-9]:[0-9]*

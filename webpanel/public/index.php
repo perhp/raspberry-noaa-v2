@@ -5,6 +5,10 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Config\Config;
 
+# pass times are rendered in the station's local timezone, which Ansible
+# resolves from the host clock when it renders Config.php
+date_default_timezone_set(Config::TIMEZONE);
+
 # error handling
 error_reporting(E_ALL);
 ini_set('display_errors', 1);

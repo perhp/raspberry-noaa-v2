@@ -24,6 +24,10 @@ class Config {
   # use https://www.php.net/manual/en/timezones.php
   const TIMEZONE = '{{ system_timezone.stdout }}';
 
+  # the user that owns the scheduled 'at' jobs - www-data sudoes to it to run
+  # atrm when a pass is deleted from the admin page
+  const AT_USER = '{{ target_user }}';
+
   # location of images
   const IMAGE_PATH = '{{ images_output }}';
 
