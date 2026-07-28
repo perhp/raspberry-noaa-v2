@@ -14,7 +14,6 @@
 # Example:
 #   ./scripts/tools/sky_quality_map.py /home/pi/raspberry-noaa-v2/db/panel.db /srv/images/sky-quality-map.png
 
-import datetime
 import sqlite3
 import sys
 import time
@@ -22,7 +21,22 @@ import time
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
+
+# webpanel design tokens (see webpanel/public/assets/css/rn2.css) so the plot
+# sits in the Stats page rather than on top of it
+PANEL = '#ffffff'
+INK = '#1b2534'
+DIM = '#4f6076'
+FAINT = '#7f8da1'
+LINE = '#c7d0dd'
+LINE_SOFT = '#dde3ec'
+RED = '#cc3a2b'
+
+# single-hue sequential ramp, light (weak) to dark (strong)
+SNR_CMAP = LinearSegmentedColormap.from_list(
+    'rn2_snr', ['#b7cdec', '#5a95d8', '#2268c2', '#123f79'])
 
 
 def fetch_passes(db_file):
@@ -77,42 +91,52 @@ def main():
       ok_el.append(el)
       ok_snr.append(float(snr))
 
-  fig = plt.figure(figsize=(8, 8))
-  p = fig.add_subplot(111, projection='polar')
+  plt.rcParams.update({
+      'font.family': 'monospace',
+      'font.monospace': ['DejaVu Sans Mono', 'monospace'],
+      'font.size': 8.5,
+  })
+
+  # the page supplies the heading, pass count and explanation, so the plot
+  # carries no title of its own
+  fig = plt.figure(figsize=(7.2, 7.2), facecolor=PANEL)
+  p = fig.add_subplot(111, projection='polar', facecolor=PANEL)
   p.set_theta_zero_location('N')
   p.set_theta_direction(-1)
   # zenith at the center, horizon at the edge
   p.set_rlim(90, 0)
   p.set_yticks(np.arange(90, 0, step=-15))
-  p.set_yticklabels(['', '75°', '60°', '45°', '30°', '15°'])
+  p.set_yticklabels(['', '75°', '60°', '45°', '30°', '15°'], color=FAINT)
   p.set_xticks(np.deg2rad(np.arange(0, 360, 45)))
-  p.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
+  p.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], color=DIM)
+  p.tick_params(pad=6)
+  p.grid(color=LINE_SOFT, linewidth=0.8)
+  p.spines['polar'].set_color(LINE)
 
-  if nosnr_az:
-    p.scatter(nosnr_az, nosnr_el, c='lightgray', s=40, edgecolors='gray',
-              linewidths=0.5, label='decoded (no SNR data)', zorder=2)
-  if fail_az:
-    p.scatter(fail_az, fail_el, c='red', marker='x', s=40,
-              label='failed pass', zorder=3)
   scatter = None
   if ok_az:
-    scatter = p.scatter(ok_az, ok_el, c=ok_snr, cmap='viridis', s=60,
-                        edgecolors='black', linewidths=0.5,
-                        label='decoded pass', zorder=4)
-
-  title = "Reception Quality Sky Map\n"
-  title += "each point = max elevation position of a pass\n"
-  title += "{} passes through {}".format(
-      len(rows), datetime.date.today().strftime('%Y-%m-%d'))
-  p.set_title(title, pad=25, fontsize=11)
+    scatter = p.scatter(ok_az, ok_el, c=ok_snr, cmap=SNR_CMAP, s=64,
+                        edgecolors=INK, linewidths=0.6,
+                        label='decoded', zorder=3)
+  # hollow, so an unmeasured pass never reads as a weak one on the SNR ramp
+  if nosnr_az:
+    p.scatter(nosnr_az, nosnr_el, facecolors='none', s=46, edgecolors=FAINT,
+              linewidths=0.9, label='decoded, no SNR', zorder=2)
+  if fail_az:
+    p.scatter(fail_az, fail_el, c=RED, marker='x', s=46, linewidths=1.6,
+              label='failed', zorder=4)
 
   if scatter is not None:
-    cbar = fig.colorbar(scatter, ax=p, shrink=0.7, pad=0.1)
-    cbar.set_label('Peak SNR (dB)')
+    cbar = fig.colorbar(scatter, ax=p, shrink=0.5, pad=0.06, aspect=16)
+    cbar.set_label('PEAK SNR (dB)', color=DIM, labelpad=10)
+    cbar.outline.set_edgecolor(LINE)
+    cbar.ax.tick_params(color=LINE, labelcolor=FAINT, length=3)
   if nosnr_az or fail_az or ok_az:
-    p.legend(loc='lower left', bbox_to_anchor=(-0.1, -0.12), fontsize=8)
+    legend = p.legend(loc='lower left', bbox_to_anchor=(-0.08, -0.08),
+                      frameon=False, labelcolor=DIM, handletextpad=0.4)
+    legend.set_zorder(5)
 
-  plt.savefig(out_file, bbox_inches='tight', dpi=100)
+  plt.savefig(out_file, bbox_inches='tight', dpi=100, facecolor=PANEL)
 
 
 if __name__ == '__main__':

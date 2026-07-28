@@ -872,11 +872,355 @@ dialog.confirm .dialog-foot {
 }
 
 /* ------------------------------------------------------------------ */
+/* Stats: readout rail + chart recorder                                */
+/* The rail and the recorder are one instrument - the rail's bottom    */
+/* border is suppressed so they share an edge.                         */
+/* ------------------------------------------------------------------ */
+
+.readout-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+
+.readout {
+  padding: 0.9rem 1.1rem 1rem;
+  border-left: 1px solid var(--line-soft);
+}
+
+.readout:first-child { border-left: 0; }
+
+.readout .value {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.readout .value .unit {
+  font-size: 0.9rem;
+  color: var(--dim);
+  margin-left: 0.1em;
+}
+
+.readout .name {
+  display: block;
+  margin-top: 0.55rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.readout .note {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--faint);
+}
+
+.recorder {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 6px 6px;
+  padding: 1.5rem 1.1rem 0.75rem;
+}
+
+/* ruled chart paper: the gutter holds the scale, the baseline is the pen rest */
+.rec-chart {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 150px;
+  padding-left: 2.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.rec-rule,
+.rec-datum {
+  position: absolute;
+  left: 2.6rem;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.rec-rule { border-top: 1px solid var(--line-soft); }
+
+.rec-rule i {
+  position: absolute;
+  left: -2.6rem;
+  width: 2.1rem;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-style: normal;
+  line-height: 1;
+  text-align: right;
+  color: var(--faint);
+}
+
+/* the daily mean, drawn as an instrument datum line and named in the key
+   below rather than labelled in place, where it would cross the trace */
+.rec-datum { border-top: 1px dashed var(--amber); }
+
+.rec-day {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.rec-day:hover { background: rgba(34, 104, 194, 0.07); }
+
+/* days the station recorded nothing keep their place in the series */
+.rec-day.is-nil::after {
+  content: "";
+  position: absolute;
+  inset: auto 19% 0 19%;
+  height: 2px;
+  background: var(--line-soft);
+}
+
+/* the trace is narrower than its day so a busy month reads as separate
+   strokes rather than one solid block */
+.rec-bar {
+  display: block;
+  width: 62%;
+  margin-inline: auto;
+}
+
+.rec-bar:first-child { border-radius: 3px 3px 0 0; }
+
+.rec-bar.ok { background: var(--blue); }
+.rec-bar.fail { background: var(--red); }
+
+.rec-axis {
+  display: flex;
+  gap: 2px;
+  padding-left: 2.6rem;
+  margin-top: 0.45rem;
+}
+
+.rec-axis {
+  min-height: 0.9rem;
+}
+
+.rec-axis span {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* each tick hangs off its own day column; the two end ticks anchor to the
+   paper's edges instead of centring, so they cannot bleed past it */
+.rec-axis i {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--faint);
+}
+
+.rec-axis span:first-child i { left: 0; transform: none; }
+.rec-axis span:last-child i { left: auto; right: 0; transform: none; }
+
+.rec-axis span.is-today i { color: var(--amber); }
+
+.rec-foot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.rec-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.rec-key i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+
+.rec-key i.ok { background: var(--blue); }
+.rec-key i.fail { background: var(--red); }
+
+.rec-key i.datum {
+  width: 1.1rem;
+  height: 0;
+  border-top: 1px dashed var(--amber);
+  border-radius: 0;
+}
+
+.rec-span {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* the pen tracing left to right across the paper, once, on load */
+@media (prefers-reduced-motion: no-preference) {
+  .rec-day {
+    transform-origin: bottom;
+    animation: rec-trace 420ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 16ms);
+  }
+
+  @keyframes rec-trace {
+    from { transform: scaleY(0); }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Stats: per-satellite SNR bar, composites, sky survey                */
+/* ------------------------------------------------------------------ */
+
+/* shares the elevation gauge's layout; scaled to the station's best SNR */
+.snr-gauge .num { min-width: 3.6rem; }
+.snr-gauge i b { width: var(--snr, 0%); }
+
+.sat-name {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* the composites are reference plates, not the page's subject - they sit on a
+   tighter grid than the Passes page instruments so a full set fits one row */
+.composite-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+figure.composite,
+figure.sky-survey {
+  margin: 0;
+}
+
+figure.composite {
+  display: flex;
+  flex-direction: column;
+}
+
+/* pins the caption to the bottom when a row's plates differ in height */
+figure.composite figcaption { margin-top: auto; }
+
+figure.composite figcaption,
+figure.sky-survey figcaption {
+  padding: 0.6rem 0.85rem 0.7rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+figure.composite .composite-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+figure.composite .composite-date {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--faint);
+}
+
+/* the plate itself opens the full-size image */
+figure.composite a.instrument-body { display: block; }
+
+figure.composite { transition: border-color 120ms ease; }
+figure.composite:hover { border-color: var(--line); }
+figure.composite:focus-within { border-color: var(--amber); }
+
+figure.sky-survey .instrument-body {
+  background: var(--panel);
+  padding: 0.5rem;
+}
+
+figure.sky-survey .instrument-body img {
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+figure.sky-survey figcaption {
+  max-width: 68ch;
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+
+.empty-panel {
+  padding: 2.5rem 1.25rem;
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.empty-panel p {
+  margin: 0;
+  max-width: 52ch;
+  margin-inline: auto;
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------------------ */
 /* Responsive                                                          */
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 720px) {
   .hide-sm { display: none !important; }
+
+  /* the aux fact drops to its own line rather than squeezing the heading */
+  .panel-label { flex-wrap: wrap; }
+  .panel-label .rule { min-width: 1rem; }
+  .panel-label .label-aux { flex-basis: 100%; }
+
+  .readout { border-left: 0; border-top: 1px solid var(--line-soft); }
+  .readout:first-child { border-top: 0; }
+
+  .recorder { padding: 1.5rem 0.8rem 0.75rem; }
+  .rec-chart { height: 110px; gap: 1px; }
+  .rec-axis { gap: 1px; }
+  .rec-axis i { font-size: 0.55rem; }
+  .rec-datum i { font-size: 0.55rem; }
 
   .masthead-inner {
     flex-wrap: wrap;

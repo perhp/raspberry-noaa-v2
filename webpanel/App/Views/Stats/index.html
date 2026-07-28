@@ -2,51 +2,104 @@
 
 {% block body %}
   <div class="panel-label">
-    <h2>{{ lang.station_totals|default('Station Totals') }}</h2>
+    <h2>{{ lang.station_record|default('Station record') }}</h2>
     <span class="rule"></span>
+    <span class="label-aux">
+      {%- if stat.totals.first_capture -%}
+        {{ lang.recording_since|default('Recording since') }} {{ stat.totals.first_capture|date(constant('Config\\Config::DATE_FORMAT')) }}
+      {%- else -%}
+        {{ lang.no_record_yet|default('No passes decoded yet') }}
+      {%- endif -%}
+    </span>
   </div>
-  <div class="table-panel" style="padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 2.5rem;">
-    <div>
-      <div style="font-size: 1.6rem; font-family: var(--font-display);">{{ stat.totals.total_captures }}</div>
-      <div style="color: var(--dim); font-size: 0.8rem;">{{ lang.total_captures|default('Total captures') }}</div>
+
+  <div class="readout-rail">
+    <div class="readout">
+      <div class="value">{{ stat.totals.total_captures }}</div>
+      <span class="name">{{ lang.captures_decoded|default('Captures decoded') }}</span>
+      <span class="note">{{ lang.all_time|default('all time') }}</span>
     </div>
-    <div>
-      <div style="font-size: 1.6rem; font-family: var(--font-display);">{{ stat.totals.attempted_30d }}</div>
-      <div style="color: var(--dim); font-size: 0.8rem;">{{ lang.passes_30d|default('Passes attempted, last 30 days') }}</div>
-    </div>
-    <div>
-      <div style="font-size: 1.6rem; font-family: var(--font-display);">
-        {% if stat.totals.success_rate_30d is not null %}{{ stat.totals.success_rate_30d }}%{% else %}&mdash;{% endif %}
+    <div class="readout">
+      <div class="value">
+        {%- if stat.totals.success_rate_30d is not null -%}
+          {{ stat.totals.success_rate_30d }}<span class="unit">%</span>
+        {%- else -%}
+          &mdash;
+        {%- endif -%}
       </div>
-      <div style="color: var(--dim); font-size: 0.8rem;">{{ lang.success_rate_30d|default('Success rate, last 30 days') }}</div>
+      <span class="name">{{ lang.passes_completed|default('Passes completed') }}</span>
+      <span class="note">
+        {%- if stat.totals.attempted_30d > 0 -%}
+          {{ stat.totals.attempted_30d }} {{ lang.attempted_in_30d|default('attempted in 30 days') }}
+        {%- else -%}
+          {{ lang.none_attempted_30d|default('none attempted in 30 days') }}
+        {%- endif -%}
+      </span>
+    </div>
+    <div class="readout">
+      <div class="value">
+        {%- if stat.best_snr_overall is not null -%}
+          {{ stat.best_snr_overall }}<span class="unit">dB</span>
+        {%- else -%}
+          &mdash;
+        {%- endif -%}
+      </div>
+      <span class="name">{{ lang.strongest_signal|default('Strongest signal') }}</span>
+      <span class="note">{{ lang.peak_snr_recorded|default('peak SNR on record') }}</span>
     </div>
   </div>
 
-  <div class="panel-label">
-    <h2>{{ lang.captures_per_day|default('Captures per Day') }}</h2>
-    <span class="rule"></span>
-    <span class="label-aux">{{ lang.last_30_days|default('Last 30 days') }}</span>
-  </div>
-  <div class="table-panel" style="padding: 12px 16px;">
-    {% if stat.per_day|length > 0 %}
-      {% for row in stat.per_day %}
-        <div style="display: flex; align-items: center; gap: 10px; margin: 3px 0;"
-             title="{{ row.day }}: {{ row.captures }}">
-          <span class="num" style="width: 6.5rem; font-size: 0.75rem; color: var(--dim);">{{ row.day }}</span>
-          <span style="flex: 1; display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-block; height: 10px; border-radius: 0 4px 4px 0; background: var(--blue); width: {{ ((row.captures / stat.max_per_day) * 100)|round }}%;"></span>
-            <span class="num" style="font-size: 0.75rem; color: var(--dim);">{{ row.captures }}</span>
-          </span>
+  {# Chart recorder: one column per day of the window, stacked decoded over
+     failed, on ruled paper with the daily mean drawn as a datum line. #}
+  <div class="recorder">
+    <div class="rec-chart" role="img"
+         aria-label="{{ lang.recorder_alt|default('Passes per day over the last 30 days, decoded and failed') }}">
+      <span class="rec-rule" style="bottom: 100%"><i>{{ stat.record_axis }}</i></span>
+      <span class="rec-rule" style="bottom: 50%"><i>{{ (stat.record_axis / 2)|round }}</i></span>
+      {# below a twelfth of the scale the datum line sits on the baseline and
+         only adds clutter, so it is left off #}
+      {% set show_datum = stat.record_mean / stat.record_axis >= 0.08 %}
+      {% if show_datum %}
+        <span class="rec-datum" style="bottom: {{ (stat.record_mean / stat.record_axis * 100)|round(1) }}%"></span>
+      {% endif %}
+
+      {% for row in stat.record %}
+        <div class="rec-day{% if row.total == 0 %} is-nil{% endif %}" style="--i: {{ loop.index0 }}"
+             title="{{ row.timestamp|date(constant('Config\\Config::DATE_FORMAT')) }} &middot; {{ row.decoded }} {{ lang.decoded|default('decoded') }}{% if row.failed > 0 %}, {{ row.failed }} {{ lang.failed|default('failed') }}{% endif %}">
+          {% if row.failed > 0 %}
+            <span class="rec-bar fail" style="height: {{ (row.failed / stat.record_axis * 100)|round(1) }}%"></span>
+          {% endif %}
+          {% if row.decoded > 0 %}
+            <span class="rec-bar ok" style="height: {{ (row.decoded / stat.record_axis * 100)|round(1) }}%"></span>
+          {% endif %}
         </div>
       {% endfor %}
-    {% else %}
-      <p style="color: var(--dim);">{{ lang.no_captures_yet|default('No captures in the last 30 days.') }}</p>
-    {% endif %}
+    </div>
+
+    <div class="rec-axis">
+      {% for row in stat.record %}
+        {# a tick a week apart, plus today - dropping any weekly tick close
+           enough to the end that the two labels would collide #}
+        <span{% if loop.last %} class="is-today"{% endif %}>
+          {%- if loop.last or (loop.index0 % 7 == 0 and loop.revindex0 > 3) %}<i>{{ row.timestamp|date('j M') }}</i>{% endif -%}
+        </span>
+      {% endfor %}
+    </div>
+
+    <div class="rec-foot">
+      <span class="rec-key"><i class="ok"></i>{{ lang.decoded|default('decoded') }}</span>
+      <span class="rec-key"><i class="fail"></i>{{ lang.failed|default('failed') }}</span>
+      {% if show_datum %}
+        <span class="rec-key"><i class="datum"></i>{{ lang.mean|default('mean') }} {{ stat.record_mean }}{{ lang.per_day_suffix|default('/day') }}</span>
+      {% endif %}
+      <span class="rec-span">{{ lang.last_30_days|default('Last 30 days') }}</span>
+    </div>
   </div>
 
   <div class="panel-label">
-    <h2>{{ lang.per_satellite|default('Per Satellite') }}</h2>
+    <h2>{{ lang.per_satellite|default('Per satellite') }}</h2>
     <span class="rule"></span>
+    <span class="label-aux">{{ lang.snr_bar_note|default('SNR bars scale to the station peak') }}</span>
   </div>
   <div class="table-panel">
     <table class="telemetry">
@@ -54,68 +107,115 @@
         <tr>
           <th>{{ lang['satellite'] }}</th>
           <th class="center">{{ lang['captures'] }}</th>
-          <th class="center">{{ lang.avg_elev|default('Avg Elevation') }}</th>
-          <th class="center">{{ lang.avg_snr|default('Avg SNR') }}</th>
-          <th class="center">{{ lang.best_snr|default('Best SNR') }}</th>
-          <th class="center">{{ lang.avg_frame_loss|default('Avg Frame Loss') }}</th>
-          <th class="center hide-sm">{{ lang.last_capture|default('Last Capture') }}</th>
+          <th class="center">{{ lang.avg_elev|default('Avg elevation') }}</th>
+          <th>{{ lang.avg_snr|default('Avg SNR') }}</th>
+          <th class="center hide-sm">{{ lang.best_snr|default('Best SNR') }}</th>
+          <th>{{ lang.avg_frame_loss|default('Avg frame loss') }}</th>
+          <th class="center hide-sm">{{ lang.last_capture|default('Last capture') }}</th>
         </tr>
       </thead>
       <tbody>
         {% for row in stat.per_satellite %}
           <tr>
-            <td>{{ row.sat_name }}</td>
+            <td class="sat-name">{{ row.sat_name }}</td>
             <td class="center num">{{ row.captures }}</td>
             <td class="center num">{{ row.avg_elev }}&#176;</td>
-            <td class="center num">{% if row.avg_snr is not null %}{{ row.avg_snr }} dB{% else %}&mdash;{% endif %}</td>
-            <td class="center num">{% if row.best_snr is not null %}{{ row.best_snr }} dB{% else %}&mdash;{% endif %}</td>
-            <td class="center num">{% if row.avg_frame_loss is not null %}{{ row.avg_frame_loss }}%{% else %}&mdash;{% endif %}</td>
+            <td>
+              {% if row.avg_snr is not null and stat.best_snr_overall %}
+                <span class="elev-gauge snr-gauge">
+                  <span class="num">{{ row.avg_snr }} dB</span>
+                  <i style="--snr: {{ (row.avg_snr / stat.best_snr_overall * 100)|round }}%"><b></b></i>
+                </span>
+              {% else %}
+                <span class="num faint">&mdash;</span>
+              {% endif %}
+            </td>
+            <td class="center num hide-sm">{% if row.best_snr is not null %}{{ row.best_snr }} dB{% else %}&mdash;{% endif %}</td>
+            <td>
+              {% if row.avg_frame_loss is not null %}
+                <span class="elev-gauge frame-gauge{% if row.avg_frame_loss >= 20 %} bad{% elseif row.avg_frame_loss >= 5 %} warn{% endif %}">
+                  <span class="num">{{ row.avg_frame_loss }}%</span>
+                  <i style="--yield: {{ (100 - row.avg_frame_loss)|round }}%"><b></b></i>
+                </span>
+              {% else %}
+                <span class="num faint">&mdash;</span>
+              {% endif %}
+            </td>
             <td class="center num hide-sm">{{ row.last_capture|date(constant('Config\\Config::DATETIME_FORMAT')) }}</td>
           </tr>
         {% else %}
           <tr>
-            <td colspan="7" class="no-passes">{{ lang.no_captures_yet|default('No captures yet.') }}</td>
+            <td colspan="7" class="no-passes">{{ lang.no_captures_yet|default('Nothing decoded yet. Satellites appear here after their first successful pass.') }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  {% for variant, mosaic_file in mosaic_files %}
+  {% if mosaic_files|length > 0 %}
     <div class="panel-label">
-      <h2>{{ lang.latest_mosaic|default('Latest Mosaic') }} - {{ variant }}</h2>
+      <h2>{{ lang.daily_mosaic|default('Daily mosaic') }}</h2>
       <span class="rule"></span>
-      <span class="label-aux">{{ mosaic_file }}</span>
+      <span class="label-aux">{{ lang.one_per_projection|default('one per projection') }}</span>
     </div>
-    <div class="instrument">
-      <div class="instrument-body">
-        <img src="/images/{{ mosaic_file }}" alt="{{ lang.latest_mosaic|default('Latest Mosaic') }} {{ variant }}" loading="lazy" style="max-width: 100%; height: auto;">
-      </div>
+    <div class="composite-grid">
+      {% for variant, mosaic in mosaic_files %}
+        <figure class="instrument composite">
+          <a class="instrument-body" href="/images/{{ mosaic.file }}">
+            <img src="/images/{{ mosaic.file }}" alt="{{ lang.daily_mosaic|default('Daily mosaic') }} - {{ variant|replace({'_': ' '}) }}" loading="lazy">
+          </a>
+          <figcaption>
+            <span class="composite-name">{{ variant|replace({'_': ' '}) }}</span>
+            <span class="composite-date">{{ mosaic.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+          </figcaption>
+        </figure>
+      {% endfor %}
     </div>
-  {% endfor %}
+  {% endif %}
 
-  {% for variant, timelapse_file in timelapse_files %}
+  {% if timelapse_files|length > 0 %}
     <div class="panel-label">
-      <h2>{{ lang.latest_timelapse|default('Latest Timelapse') }}{% if variant != '' %} - {{ variant }}{% endif %}</h2>
+      <h2>{{ lang.timelapse|default('Timelapse') }}</h2>
       <span class="rule"></span>
-      <span class="label-aux">{{ timelapse_file }}</span>
+      <span class="label-aux">{{ lang.one_per_projection|default('one per projection') }}</span>
     </div>
-    <div class="instrument">
-      <div class="instrument-body">
-        <img src="/images/{{ timelapse_file }}" alt="{{ lang.latest_timelapse|default('Latest Timelapse') }} {{ variant }}" loading="lazy" style="max-width: 100%; height: auto;">
-      </div>
+    <div class="composite-grid">
+      {% for variant, timelapse in timelapse_files %}
+        {% set label = variant != '' ? variant|replace({'_': ' '}) : lang.all_projections|default('all projections') %}
+        <figure class="instrument composite">
+          <a class="instrument-body" href="/images/{{ timelapse.file }}">
+            <img src="/images/{{ timelapse.file }}" alt="{{ lang.timelapse|default('Timelapse') }} - {{ label }}" loading="lazy">
+          </a>
+          <figcaption>
+            <span class="composite-name">{{ label }}</span>
+            <span class="composite-date">{{ timelapse.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+          </figcaption>
+        </figure>
+      {% endfor %}
     </div>
-  {% endfor %}
+  {% endif %}
 
   <div class="panel-label">
-    <h2>{{ lang.sky_quality_map|default('Reception Quality Sky Map') }}</h2>
+    <h2>{{ lang.horizon_survey|default('Horizon survey') }}</h2>
     <span class="rule"></span>
+    <span class="label-aux">
+      {%- if sky_map_exists -%}
+        {{ stat.totals.passes_plotted }} {{ lang.passes_plotted|default('passes plotted') }}
+      {%- endif -%}
+    </span>
   </div>
 
   {% if sky_map_exists %}
-    <p>{{ lang.sky_quality_map_help|default('Each point is the maximum-elevation position of a past pass, colored by the peak SNR SatDump reported. Clusters of weak or failed passes show where your horizon is obstructed.') }}</p>
-    <img src="/images/sky-quality-map.png?v={{ sky_map_mtime }}" alt="Reception quality sky map" style="max-width: 100%; height: auto;">
+    <figure class="instrument sky-survey">
+      <div class="instrument-body">
+        <img src="/images/sky-quality-map.png?v={{ sky_map_mtime }}"
+             alt="{{ lang.sky_quality_map|default('Reception quality sky map') }}">
+      </div>
+      <figcaption>{{ lang.sky_quality_map_help|default('Each point is a past pass, placed where it reached its highest elevation and colored by the peak SNR SatDump reported. Clusters of weak or failed passes show where the horizon is obstructed.') }}</figcaption>
+    </figure>
   {% else %}
-    <p>{{ lang.sky_quality_map_missing|default('The sky map has not been generated yet - it is rebuilt nightly once passes have been captured, or run scripts/tools/sky_quality_map.sh manually.') }}</p>
+    <div class="empty-panel">
+      <p>{{ lang.sky_quality_map_missing|default('The sky map is rebuilt nightly once passes have been captured. To draw it now, run scripts/tools/sky_quality_map.sh.') }}</p>
+    </div>
   {% endif %}
 {% endblock %}

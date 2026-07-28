@@ -8,7 +8,7 @@ use Config\Config;
 class StatsController extends \Lib\Controller {
   public function indexAction($args) {
     $stat = $this->loadModel('Stat');
-    $stat->getCapturesPerDay(30);
+    $stat->getDailyRecord(30);
     $stat->getPerSatellite();
     $stat->getTotals();
 
@@ -19,8 +19,8 @@ class StatsController extends \Lib\Controller {
       'stat' => $stat,
       'sky_map_exists' => $sky_map_exists,
       'sky_map_mtime' => $sky_map_exists ? filemtime($sky_map_file) : 0,
-      'timelapse_files' => $this->newestPerVariant('/timelapse-*.gif', '/^timelapse-\d{8}(?:-(.+))?\.gif$/'),
-      'mosaic_files' => $this->newestPerVariant('/mosaic-*.jpg', '/^mosaic-\d{8}-(.+)\.jpg$/'),
+      'timelapse_files' => $this->newestPerVariant('/timelapse-*.gif', '/^timelapse-(\d{8})(?:-(.+))?\.gif$/'),
+      'mosaic_files' => $this->newestPerVariant('/mosaic-*.jpg', '/^mosaic-(\d{8})-(.+)\.jpg$/'),
     ));
 
     View::renderTemplate('Stats/index.html', $args);
@@ -30,7 +30,9 @@ class StatsController extends \Lib\Controller {
   # the best of day job builds. Both are named <kind>-YYYYMMDD-<variant>.<ext>,
   # so the date-stamped names sort chronologically and the last one seen for a
   # variant is its most recent. Timelapses produced before the per-projection
-  # naming carry no variant and are keyed by an empty string.
+  # naming carry no variant and are keyed by an empty string. The capture date
+  # is lifted out of the name so the page can caption a plate with the day it
+  # covers rather than its filename.
   private function newestPerVariant($glob_pattern, $name_pattern) {
     $newest = array();
     $files = glob(Config::IMAGE_PATH . $glob_pattern);
@@ -41,7 +43,11 @@ class StatsController extends \Lib\Controller {
     sort($files);
     foreach ($files as $file) {
       if (preg_match($name_pattern, basename($file), $matches)) {
-        $newest[isset($matches[1]) ? $matches[1] : ''] = basename($file);
+        $variant = isset($matches[2]) ? $matches[2] : '';
+        $newest[$variant] = array(
+          'file' => basename($file),
+          'date' => strtotime($matches[1]),
+        );
       }
     }
     ksort($newest);
