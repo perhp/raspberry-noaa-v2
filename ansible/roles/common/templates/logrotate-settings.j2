@@ -4,5 +4,7 @@
   rotate 7
   nocompress
   notifempty
-  create 0640 {{ target_user }} {{ target_user }}
+  # world-readable: the webpanel (running as the webserver user) tails this
+  # log for the live capture status
+  create 0644 {{ target_user }} {{ target_user }}
 }
