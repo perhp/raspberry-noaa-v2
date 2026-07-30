@@ -19,6 +19,8 @@ return array(
   "filter_day" => "Day",
   "filter_daynight" => "Day/Night",
   "filter_night" => "Night",
+  "fullscreen" => "Fullscreen",
+  "close" => "Close",
   "gain" => "Gain",
   "image" => "Image",
   "live_status" => "Live status",

@@ -16,10 +16,12 @@ class PassesController extends \Lib\Controller {
     $pass = $this->loadModel('Pass');
     $current = $pass->getCurrentCapture();
 
-    # only expose the log tail while a capture is actually running
+    # only expose the log tail while a capture is actually running; the
+    # fullscreen terminal asks for a longer tail than the inline one
     $log_tail = array();
     if ($current !== null) {
-      $log_tail = $this->tailLog(12);
+      $lines = isset($_GET['lines']) ? max(1, min(100, (int)$_GET['lines'])) : 12;
+      $log_tail = $this->tailLog($lines);
     }
 
     # date/time labels are formatted here so the browser shows server-local

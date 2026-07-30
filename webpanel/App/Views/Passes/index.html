@@ -10,6 +10,12 @@
       <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
       <span class="term-title">rn2@ground:~ — tail -f /var/log/raspberry-noaa-v2/output.log</span>
       <span class="term-conn" id="term-conn">&#9675; IDLE</span>
+      <button type="button" class="term-btn term-btn-max" id="term-max" title="{{ lang.fullscreen|default('Fullscreen') }}" aria-label="{{ lang.fullscreen|default('Fullscreen') }}">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4"/><path d="M13.5 2.5L9 7"/><path d="M6.5 13.5h-4v-4"/><path d="M2.5 13.5L7 9"/></svg>
+      </button>
+      <button type="button" class="term-btn term-btn-close" id="term-close" title="{{ lang.close|default('Close') }}" aria-label="{{ lang.close|default('Close') }}">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
     </div>
     <div class="term-screen">
       <div class="term-line">
@@ -208,8 +214,22 @@
         return (h > 0 ? h + ':' + pad(m) : m) + ':' + pad(s);
       }
 
+      {# fullscreen mode: the terminal becomes a fixed overlay; a longer log
+         tail is requested so the extra screen space actually shows more #}
+      function setMax(on) {
+        termEl.classList.toggle('max', on);
+        document.body.classList.toggle('term-max-open', on);
+        refresh();
+      }
+      document.getElementById('term-max').addEventListener('click', function() { setMax(true); });
+      document.getElementById('term-close').addEventListener('click', function() { setMax(false); });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && termEl.classList.contains('max')) setMax(false);
+      });
+
       function refresh() {
-        fetch('/passes/status').then(function(r) { return r.json(); }).then(function(d) {
+        var url = '/passes/status' + (termEl.classList.contains('max') ? '?lines=40' : '');
+        fetch(url).then(function(r) { return r.json(); }).then(function(d) {
           renderPasses(d);
           termEl.classList.toggle('rec', !!d.current);
           connEl.innerHTML = d.current ? '&#9679; REC' : '&#9675; IDLE';

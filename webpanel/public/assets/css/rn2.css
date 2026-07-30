@@ -321,6 +321,69 @@ main.wrap {
   text-shadow: 0 0 6px rgba(255, 92, 77, 0.55);
 }
 
+/* titlebar buttons: fullscreen toggle, and its close counterpart */
+.term-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-left: 0.5rem;
+  padding: 0;
+  border: 1px solid #16351d;
+  border-radius: 4px;
+  background: none;
+  color: #3f9155;
+  cursor: pointer;
+}
+.term-btn:hover {
+  color: #37f06a;
+  border-color: #2c8a41;
+}
+.term-btn svg {
+  width: 0.7rem;
+  height: 0.7rem;
+  display: block;
+}
+.term .term-btn-close {
+  display: none;
+}
+
+/* fullscreen mode: the terminal takes over the viewport; the expand button
+   swaps for the close one and the log area grows to fill the screen */
+.term.max {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+.term.max .term-btn-max {
+  display: none;
+}
+.term.max .term-btn-close {
+  display: inline-flex;
+}
+.term.max .term-screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.term.max .term-screen pre {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+/* no background scroll while the terminal overlay is up */
+body.term-max-open {
+  overflow: hidden;
+}
+
 .term-screen {
   position: relative;
   padding: 0.8rem 1rem 0.9rem;
