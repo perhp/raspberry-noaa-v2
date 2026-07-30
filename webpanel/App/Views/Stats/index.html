@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block body %}
+  {% set dl_icon %}
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7"/><path d="M4.5 6.5L8 10l3.5-3.5"/><path d="M2.5 13h11"/></svg>
+  {% endset %}
+
   <div class="panel-label">
     <h2>{{ lang.station_record|default('Station record') }}</h2>
     <span class="rule"></span>
@@ -165,8 +169,12 @@
             <img src="/images/{{ mosaic.file }}" alt="{{ lang.daily_mosaic|default('Daily mosaic') }} - {{ variant|replace({'_': ' '}) }}" loading="lazy">
           </a>
           <figcaption>
-            <span class="composite-name">{{ variant|replace({'_': ' '}) }}</span>
-            <span class="composite-date">{{ mosaic.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+            <span class="composite-meta">
+              <span class="composite-name">{{ variant|replace({'_': ' '}) }}</span>
+              <span class="composite-date">{{ mosaic.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+            </span>
+            <a class="dl-btn" href="/images/{{ mosaic.file }}" download
+               title="{{ lang.download|default('Download') }}" aria-label="{{ lang.download|default('Download') }} - {{ lang.daily_mosaic|default('Daily mosaic') }} {{ variant|replace({'_': ' '}) }}">{{ dl_icon }}</a>
           </figcaption>
         </figure>
       {% endfor %}
@@ -187,8 +195,12 @@
             <img src="/images/{{ timelapse.file }}" alt="{{ lang.timelapse|default('Timelapse') }} - {{ label }}" loading="lazy">
           </a>
           <figcaption>
-            <span class="composite-name">{{ label }}</span>
-            <span class="composite-date">{{ timelapse.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+            <span class="composite-meta">
+              <span class="composite-name">{{ label }}</span>
+              <span class="composite-date">{{ timelapse.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+            </span>
+            <a class="dl-btn" href="/images/{{ timelapse.file }}" download
+               title="{{ lang.download|default('Download') }}" aria-label="{{ lang.download|default('Download') }} - {{ lang.timelapse|default('Timelapse') }} {{ label }}">{{ dl_icon }}</a>
           </figcaption>
         </figure>
       {% endfor %}
@@ -211,7 +223,11 @@
         <img src="/images/sky-quality-map.png?v={{ sky_map_mtime }}"
              alt="{{ lang.sky_quality_map|default('Reception quality sky map') }}">
       </div>
-      <figcaption>{{ lang.sky_quality_map_help|default('Each point is a past pass, placed where it reached its highest elevation and colored by the peak SNR SatDump reported. Clusters of weak or failed passes show where the horizon is obstructed.') }}</figcaption>
+      <figcaption>
+        <span>{{ lang.sky_quality_map_help|default('Each point is a past pass, placed where it reached its highest elevation and colored by the peak SNR SatDump reported. Clusters of weak or failed passes show where the horizon is obstructed.') }}</span>
+        <a class="dl-btn" href="/images/sky-quality-map.png?v={{ sky_map_mtime }}" download="sky-quality-map.png"
+           title="{{ lang.download|default('Download') }}" aria-label="{{ lang.download|default('Download') }} - {{ lang.sky_quality_map|default('Reception quality sky map') }}">{{ dl_icon }}</a>
+      </figcaption>
     </figure>
   {% else %}
     <div class="empty-panel">

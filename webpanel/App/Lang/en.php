@@ -71,6 +71,7 @@ return array(
   "avg_frame_loss" => "Avg frame loss",
   "last_capture" => "Last capture",
   "daily_mosaic" => "Daily mosaic",
+  "download" => "Download",
   "timelapse" => "Timelapse",
   "one_per_projection" => "one per projection",
   "all_projections" => "all projections",

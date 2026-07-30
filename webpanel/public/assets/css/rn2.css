@@ -1301,6 +1301,38 @@ figure.composite {
 /* pins the caption to the bottom when a row's plates differ in height */
 figure.composite figcaption {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+figure.composite .composite-meta {
+  min-width: 0;
+}
+
+/* save button shared by the composite plates and the sky survey */
+a.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--dim);
+}
+a.dl-btn:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+  text-decoration: none;
+}
+a.dl-btn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  display: block;
 }
 
 figure.composite figcaption,
@@ -1355,6 +1387,9 @@ figure.sky-survey .instrument-body img {
 figure.sky-survey figcaption {
   font-size: 0.85rem;
   color: var(--dim);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .empty-panel {
