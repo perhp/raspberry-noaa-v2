@@ -511,6 +511,19 @@ table.telemetry td.no-passes {
   border-color: rgba(34, 135, 77, 0.5);
   color: var(--green);
 }
+
+/* a captured pass's lamp doubles as the link to its capture page */
+a.lamp-link {
+  display: inline-flex;
+  border-radius: 50%;
+}
+a.lamp-link:hover {
+  text-decoration: none;
+}
+a.lamp-link:hover .lamp-done {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(34, 135, 77, 0.18);
+}
 .lamp-running {
   border-color: rgba(176, 110, 14, 0.6);
   color: var(--amber);

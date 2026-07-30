@@ -83,6 +83,7 @@
       var connEl = document.getElementById('term-conn');
       var tableEl = document.querySelector('#passes tbody');
       var satvisBase = {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}'https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&tags=Weather&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&sat='{% else %}null{% endif %};
+      var viewCaptureLabel = "{{ lang.view_capture|default('View capture')|e('js') }}";
       var stateLabels = {
         capturing: "{{ lang['running_pass']|e('js') }}",
         processing: "{{ lang['processing_pass']|e('js') }}"
@@ -141,7 +142,11 @@
       }
 
       function lampFor(p, now, prevEnd) {
-        if (p.id) return lamp('done');
+        {# a decoded_passes id means the pass has a capture - the lamp links to it #}
+        if (p.id) {
+          return '<a class="lamp-link" href="/captures/listImages?pass_id=' + encodeURIComponent(p.id) + '">' +
+                 lamp('done', lampTitles.done + ' — ' + viewCaptureLabel) + '</a>';
+        }
         if (p.status === 'failed') return lamp('failed', lampTitles.failed + (p.error_text ? ': ' + p.error_text : ''));
         if (now > p.pass_start && now < p.pass_end) return lamp('running');
         if (p.status === 'capturing' || p.status === 'processing') return lamp('processing');
