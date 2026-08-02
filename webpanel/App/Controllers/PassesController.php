@@ -16,8 +16,7 @@ class PassesController extends \Lib\Controller {
     $pass = $this->loadModel('Pass');
     $current = $pass->getCurrentCapture();
 
-    # only expose the log tail while a capture is actually running; the
-    # fullscreen terminal asks for a longer tail than the inline one
+    # only expose the log tail while a capture is actually running
     $log_tail = array();
     if ($current !== null) {
       $lines = isset($_GET['lines']) ? max(1, min(100, (int)$_GET['lines'])) : 12;
@@ -57,8 +56,9 @@ class PassesController extends \Lib\Controller {
     $handle = fopen($log_file, 'r');
     if ($handle === false) return array();
 
-    # read at most the last 16KB - plenty for a handful of lines
-    $chunk = 16384;
+    # read at most the last 64KB - enough headroom for a 100-line tail even
+    # with SatDump's long ANSI-decorated lines
+    $chunk = 65536;
     fseek($handle, max(0, $size - $chunk));
     $data = stream_get_contents($handle);
     fclose($handle);

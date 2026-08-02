@@ -85,6 +85,13 @@
     (function() {
       var statusEl = document.getElementById('live-status');
       var logEl = document.getElementById('live-log');
+
+      {# terminal-style scrollback: follow the newest output unless the user
+         scrolled up to read; scrolling back down re-engages the follow #}
+      var logFollow = true;
+      logEl.addEventListener('scroll', function() {
+        logFollow = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 4;
+      });
       var termEl = document.getElementById('live-term');
       var connEl = document.getElementById('term-conn');
       var tableEl = document.querySelector('#passes tbody');
@@ -214,11 +221,12 @@
         return (h > 0 ? h + ':' + pad(m) : m) + ':' + pad(s);
       }
 
-      {# fullscreen mode: the terminal becomes a fixed overlay; a longer log
-         tail is requested so the extra screen space actually shows more #}
+      {# fullscreen mode: the terminal becomes a fixed overlay; the log tail
+         is always fetched at full depth, so scrollback works in both modes #}
       function setMax(on) {
         termEl.classList.toggle('max', on);
         document.body.classList.toggle('term-max-open', on);
+        if (logFollow) logEl.scrollTop = logEl.scrollHeight;
         refresh();
       }
       document.getElementById('term-max').addEventListener('click', function() { setMax(true); });
@@ -228,7 +236,7 @@
       });
 
       function refresh() {
-        var url = '/passes/status' + (termEl.classList.contains('max') ? '?lines=40' : '');
+        var url = '/passes/status?lines=100';
         fetch(url).then(function(r) { return r.json(); }).then(function(d) {
           renderPasses(d);
           termEl.classList.toggle('rec', !!d.current);
@@ -241,7 +249,7 @@
             if (d.log_tail && d.log_tail.length) {
               logEl.style.display = 'block';
               logEl.textContent = d.log_tail.join('\n');
-              logEl.scrollTop = logEl.scrollHeight;
+              if (logFollow) logEl.scrollTop = logEl.scrollHeight;
             }
           } else if (d.next) {
             var wait = d.next.pass_start - d.server_time;
