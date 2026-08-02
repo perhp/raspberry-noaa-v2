@@ -293,13 +293,22 @@
         html.push('<div class="term-line"><span class="idle-label">station</span>' +
           '<span id="idle-clock"></span> <span class="dim">·</span> ' + stationQTH + '</div>');
 
-        var sched = 0, captured = 0;
+        {# is_active is cleared when a pass completes, so it cannot be used
+           as "scheduled" - tally captured vs elapsed instead, skipping
+           conflict losers (deactivated without ever running or failing) #}
+        var elapsed = 0, captured = 0, togo = 0;
         (d.passes || []).forEach(function(p) {
           if (p.date_key !== d.today) return;
-          if (p.is_active) sched++;
-          if (p.id) captured++;
+          if (!p.is_active && !p.id && !p.status) return;
+          if (p.pass_end <= now) {
+            elapsed++;
+            if (p.id) captured++;
+          } else if (p.pass_start > now) {
+            togo++;
+          }
         });
-        var todayParts = [captured + '/' + sched + ' passes captured'];
+        var todayParts = [captured + '/' + elapsed + ' passes captured'];
+        if (togo) todayParts.push(togo + ' to go');
         if (d.tle_age !== null && d.tle_age !== undefined) {
           {# TLEs refresh nightly - anything past 2 days means the cron job is broken #}
           var tleCls = d.tle_age > 345600 ? 'bad' : (d.tle_age > 172800 ? 'warn' : '');
