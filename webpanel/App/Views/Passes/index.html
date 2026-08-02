@@ -23,6 +23,7 @@
         <span id="live-status">{{ lang['no_capture_pass'] }}</span>
       </div>
       <pre id="live-log" style="display: none;"></pre>
+      <div id="term-idle" class="term-idle" style="display: none;"></div>
       <div class="term-line"><span class="term-cursor" aria-hidden="true"></span></div>
     </div>
   </div>
@@ -94,7 +95,12 @@
       });
       var termEl = document.getElementById('live-term');
       var connEl = document.getElementById('term-conn');
+      var idleEl = document.getElementById('term-idle');
       var tableEl = document.querySelector('#passes tbody');
+      var stationLat = Number("{{ constant('Config\\Config::BASE_STATION_LAT') }}");
+      var stationLon = Number("{{ constant('Config\\Config::BASE_STATION_LON') }}");
+      var nextPassLabel = "{{ lang.next_pass_label|default('Next pass')|e('js') }}";
+      var idleLabel = "{{ lang['no_capture_pass']|e('js') }}";
       var satvisBase = {% if constant('Config\\Config::ENABLE_SATVIS') == 'true' %}'https://satvis.space/?elements=Point,Label,SensorCone&layers=ArcGis&terrain=None&tags=Weather&gs={{ constant('Config\\Config::BASE_STATION_LAT') }},{{ constant('Config\\Config::BASE_STATION_LON') }}&sat='{% else %}null{% endif %};
       var viewCaptureLabel = "{{ lang.view_capture|default('View capture')|e('js') }}";
       var stateLabels = {
@@ -221,6 +227,145 @@
         return (h > 0 ? h + ':' + pad(m) : m) + ':' + pad(s);
       }
 
+      {# coarse two-unit duration for "ago" / TLE age / uptime readouts #}
+      function fmtAge(seconds) {
+        seconds = Math.max(0, Math.round(seconds));
+        var d = Math.floor(seconds / 86400);
+        var h = Math.floor((seconds % 86400) / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        if (d > 0) return d + 'd ' + h + 'h';
+        if (h > 0) return h + 'h ' + m + 'm';
+        if (m > 0) return m + 'm';
+        return seconds + 's';
+      }
+
+      function fmtGB(bytes) {
+        var g = bytes / 1073741824;
+        return (g >= 100 ? Math.round(g) : g.toFixed(1)) + 'G';
+      }
+
+      function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+      {# last poll payload plus a server clock offset, so the countdown and
+         clock tick locally every second between the 5-second polls #}
+      var last = null;
+      var clockOffset = 0;
+      function nowEpoch() { return Math.round(Date.now() / 1000) + clockOffset; }
+
+      var stationQTH = Math.abs(stationLat).toFixed(2) + '°' + (stationLat >= 0 ? 'N' : 'S') + ' ' +
+                       Math.abs(stationLon).toFixed(2) + '°' + (stationLon >= 0 ? 'E' : 'W');
+
+      function renderStatus() {
+        if (!last) return;
+        var now = nowEpoch();
+        if (last.current) {
+          statusEl.textContent = last.current.sat_name + ' — ' +
+            (stateLabels[last.current.status] || last.current.status) +
+            ' (' + fmtDelta(now - last.current.pass_start) + ', ' + last.current.max_elev + '°)';
+        } else if (last.next) {
+          statusEl.textContent = nextPassLabel + ': ' + last.next.sat_name +
+            ' @ ' + fmtTime(last.next.pass_start) +
+            ' (T-' + fmtDelta(last.next.pass_start - now) + ', ' + last.next.max_elev + '°)';
+        } else {
+          statusEl.textContent = idleLabel;
+        }
+      }
+
+      function updateClock() {
+        var el = document.getElementById('idle-clock');
+        if (!el) return;
+        var d = new Date(nowEpoch() * 1000);
+        el.textContent = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
+          pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()) + ' local · ' +
+          d.toISOString().substr(11, 8) + ' utc';
+      }
+
+      {# idle dashboard: station clock, today's tally + TLE age, last capture
+         summary, host vitals and the upcoming queue (fullscreen only) #}
+      function renderIdle(d) {
+        if (d.current) {
+          idleEl.style.display = 'none';
+          return;
+        }
+        var now = d.server_time;
+        var html = [];
+
+        html.push('<div class="term-line"><span class="idle-label">station</span>' +
+          '<span id="idle-clock"></span> <span class="dim">·</span> ' + stationQTH + '</div>');
+
+        var sched = 0, captured = 0;
+        (d.passes || []).forEach(function(p) {
+          if (p.date_key !== d.today) return;
+          if (p.is_active) sched++;
+          if (p.id) captured++;
+        });
+        var todayParts = [captured + '/' + sched + ' passes captured'];
+        if (d.tle_age !== null && d.tle_age !== undefined) {
+          {# TLEs refresh nightly - anything past 2 days means the cron job is broken #}
+          var tleCls = d.tle_age > 345600 ? 'bad' : (d.tle_age > 172800 ? 'warn' : '');
+          todayParts.push('<span class="' + tleCls + '">tle ' + fmtAge(d.tle_age) + '</span>');
+        }
+        html.push('<div class="term-line"><span class="idle-label">today</span>' +
+          todayParts.join(' <span class="dim">·</span> ') + '</div>');
+
+        if (d.latest) {
+          var lastParts = [esc(d.latest.sat_name) + ' @ ' + esc(d.latest.time_label) +
+            ' (' + fmtAge(now - d.latest.pass_start) + ' ago, ' + d.latest.max_elev + '°)'];
+          if (d.latest.max_snr !== null && d.latest.max_snr !== undefined) {
+            lastParts.push('snr ' + Number(d.latest.max_snr).toFixed(1) + ' dB');
+          }
+          if (d.latest.frame_loss_pct !== null && d.latest.frame_loss_pct !== undefined) {
+            lastParts.push('frames ' + Math.max(0, 100 - Number(d.latest.frame_loss_pct)).toFixed(1) + '%');
+          }
+          html.push('<div class="term-line"><span class="idle-label">last</span>' +
+            lastParts.join(' <span class="dim">·</span> ') + '</div>');
+        }
+
+        var v = d.vitals || {};
+        var vParts = [];
+        if (v.cpu_temp !== undefined) {
+          var cpuCls = v.cpu_temp >= 80 ? 'bad' : (v.cpu_temp >= 70 ? 'warn' : '');
+          vParts.push('<span class="' + cpuCls + '">cpu ' + Number(v.cpu_temp).toFixed(1) + '°C</span>');
+        }
+        if (v.load !== undefined) vParts.push('load ' + Number(v.load).toFixed(2));
+        if (v.mem_used_pct !== undefined) vParts.push('mem ' + v.mem_used_pct + '%');
+        if (v.disk_free !== undefined) {
+          var diskCls = v.disk_free < 2147483648 ? 'bad' : (v.disk_free < 10737418240 ? 'warn' : '');
+          vParts.push('<span class="' + diskCls + '">disk ' + fmtGB(v.disk_free) + ' free</span>');
+        }
+        if (v.uptime !== undefined) vParts.push('up ' + fmtAge(v.uptime));
+        if (vParts.length) {
+          html.push('<div class="term-line"><span class="idle-label">system</span>' +
+            vParts.join(' <span class="dim">·</span> ') + '</div>');
+        }
+
+        var upcoming = (d.passes || []).filter(function(p) {
+          return p.is_active && p.pass_start > now;
+        }).slice(0, 8);
+        if (upcoming.length) {
+          html.push('<div class="term-line dim queue-head">upcoming</div>');
+          var lastDate = d.today;
+          upcoming.forEach(function(p) {
+            if (p.date_key !== lastDate) {
+              html.push('<div class="term-line queue dim">-- ' + esc(p.date_label) + '</div>');
+              lastDate = p.date_key;
+            }
+            var ew = '';
+            if (p.azimuth_at_max !== '' && p.azimuth_at_max !== null) {
+              ew = (p.azimuth_at_max >= 0 && p.azimuth_at_max <= 180) ? 'E' : 'W';
+            }
+            var dir = p.direction === 'Southbound' ? '↓S' : (p.direction === 'Northbound' ? '↑N' : '');
+            html.push('<div class="term-line queue' + (p.max_elev >= 60 ? ' prime' : '') + '">' +
+              esc(p.start_label) + '  ' +
+              esc(String(p.sat_name).padEnd(13)) +
+              String(p.max_elev + '°' + ew).padStart(5) + '  ' + dir + '</div>');
+          });
+        }
+
+        idleEl.innerHTML = html.join('');
+        idleEl.style.display = 'block';
+      }
+
       {# fullscreen mode: the terminal becomes a fixed overlay; the log tail
          is always fetched at full depth, so scrollback works in both modes #}
       function setMax(on) {
@@ -238,34 +383,29 @@
       function refresh() {
         var url = '/passes/status?lines=100';
         fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+          last = d;
+          clockOffset = d.server_time - Math.round(Date.now() / 1000);
           renderPasses(d);
           termEl.classList.toggle('rec', !!d.current);
           connEl.innerHTML = d.current ? '&#9679; REC' : '&#9675; IDLE';
           if (d.current) {
-            var elapsed = d.server_time - d.current.pass_start;
-            statusEl.textContent = d.current.sat_name + ' — ' +
-              (stateLabels[d.current.status] || d.current.status) +
-              ' (' + fmtDelta(elapsed) + ', ' + d.current.max_elev + '°)';
             if (d.log_tail && d.log_tail.length) {
               logEl.style.display = 'block';
               logEl.textContent = d.log_tail.join('\n');
               if (logFollow) logEl.scrollTop = logEl.scrollHeight;
             }
-          } else if (d.next) {
-            var wait = d.next.pass_start - d.server_time;
-            statusEl.textContent = "{{ lang.next_pass_label|default('Next pass')|e('js') }}" + ': ' +
-              d.next.sat_name + ' @ ' + fmtTime(d.next.pass_start) +
-              ' (' + fmtDelta(wait) + ', ' + d.next.max_elev + '°)';
-            logEl.style.display = 'none';
           } else {
-            statusEl.textContent = "{{ lang['no_capture_pass']|e('js') }}";
             logEl.style.display = 'none';
           }
+          renderIdle(d);
+          renderStatus();
+          updateClock();
         }).catch(function() { /* transient poll errors are fine */ });
       }
 
       refresh();
       setInterval(refresh, 5000);
+      setInterval(function() { renderStatus(); updateClock(); }, 1000);
 
       {# the page no longer reloads itself, so cache-bust the external
          imagery (solar terminator, coronal cams) every 5 minutes instead #}

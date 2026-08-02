@@ -34,6 +34,10 @@ class Config {
   # capture log, tailed by the live status banner while a capture runs
   const LOG_FILE = '{{ log_file }}';
 
+  # TLE set used for pass prediction - the status endpoint reports its age
+  # so the idle terminal can warn when TLE updates have stopped
+  const TLE_FILE = '{{ noaa_home }}/tmp/orbit.tle';
+
   # location of thumbnails
   const THUMB_PATH = '{{ images_output }}/thumb';
 

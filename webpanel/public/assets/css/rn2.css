@@ -372,11 +372,15 @@ main.wrap {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* scale the type to the display - the panel size is far too small on the
+     small kiosk screens fullscreen mode exists for */
+  font-size: clamp(1rem, 2.6vmin, 1.5rem);
 }
 .term.max .term-screen pre {
   flex: 1;
   min-height: 0;
   max-height: none;
+  font-size: clamp(0.9rem, 2.4vmin, 1.35rem);
 }
 
 /* no background scroll while the terminal overlay is up */
@@ -456,6 +460,65 @@ body.term-max-open {
   .term.rec .term-conn {
     animation: term-blink 1.4s steps(1) infinite;
   }
+}
+
+/* idle dashboard: station clock, tally, last capture, vitals and the
+   upcoming pass queue - rendered only while no capture is running */
+.term-idle {
+  margin-top: 0.6rem;
+}
+
+.term-idle .idle-label {
+  display: inline-block;
+  min-width: 5.2em;
+  color: #1fa348;
+  text-shadow: none;
+  user-select: none;
+}
+
+.term-idle .dim {
+  color: #1fa348;
+  text-shadow: none;
+}
+
+.term-idle .warn {
+  color: #ffc247;
+  text-shadow: 0 0 6px rgba(255, 194, 71, 0.35);
+}
+
+.term-idle .bad {
+  color: #ff5c4d;
+  text-shadow: 0 0 6px rgba(255, 92, 77, 0.4);
+}
+
+.term-idle .queue {
+  white-space: pre;
+  color: #27c257;
+}
+
+.term-idle .queue.prime {
+  color: #37f06a;
+}
+
+.term-idle .queue-head {
+  margin-top: 0.6rem;
+}
+
+/* the pass table right below the panel already lists upcoming passes, so
+   the queue only shows in the fullscreen kiosk view */
+.term .term-idle .queue,
+.term .term-idle .queue-head {
+  display: none;
+}
+.term.max .term-idle .queue,
+.term.max .term-idle .queue-head {
+  display: block;
+}
+
+/* keep a long queue scrollable instead of pushing the cursor offscreen */
+.term.max .term-idle {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* ------------------------------------------------------------------ */

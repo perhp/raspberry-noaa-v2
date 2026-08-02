@@ -35,14 +35,77 @@ class PassesController extends \Lib\Controller {
       $passes[] = $row;
     }
 
+    # most recent decoded capture, for the idle summary line
+    $capture = $this->loadModel('Capture');
+    $latest = $capture->getLatest();
+    if ($latest !== null) {
+      $latest['time_label'] = date('H:i', $latest['pass_start']);
+    }
+
     header('Content-Type: application/json');
     echo json_encode(array(
       'server_time' => time(),
+      # matches the passes' date_key so the client can count today's rows
+      'today' => date('m/d/y'),
       'current' => $current,
       'next' => $pass->getNextPass(),
       'passes' => $passes,
       'log_tail' => $log_tail,
+      'latest' => $latest,
+      'vitals' => $this->vitals(),
+      'tle_age' => $this->tleAge(),
     ));
+  }
+
+  # age in seconds of the TLE set used for pass prediction, or null when the
+  # file is missing or the deployed Config predates the TLE_FILE constant
+  private function tleAge() {
+    if (!defined('\Config\Config::TLE_FILE')) return null;
+    $tle_file = Config::TLE_FILE;
+    if ($tle_file == '' || !is_readable($tle_file)) return null;
+    $mtime = @filemtime($tle_file);
+    return $mtime === false ? null : max(0, time() - $mtime);
+  }
+
+  # host vitals for the idle dashboard - every reading is optional, so a
+  # missing /sys or /proc entry just drops that field from the response
+  private function vitals() {
+    $vitals = array();
+
+    $temp = @file_get_contents('/sys/class/thermal/thermal_zone0/temp');
+    if ($temp !== false && trim($temp) !== '') {
+      $vitals['cpu_temp'] = round((int)trim($temp) / 1000, 1);
+    }
+
+    if (function_exists('sys_getloadavg')) {
+      $load = sys_getloadavg();
+      if ($load !== false) {
+        $vitals['load'] = round($load[0], 2);
+      }
+    }
+
+    $meminfo = @file_get_contents('/proc/meminfo');
+    if ($meminfo !== false &&
+        preg_match('/^MemTotal:\s+(\d+)/m', $meminfo, $total) &&
+        preg_match('/^MemAvailable:\s+(\d+)/m', $meminfo, $avail) &&
+        (int)$total[1] > 0) {
+      $vitals['mem_used_pct'] = (int)round(100 * (1 - $avail[1] / $total[1]));
+    }
+
+    $uptime = @file_get_contents('/proc/uptime');
+    if ($uptime !== false) {
+      $vitals['uptime'] = (int)floatval($uptime);
+    }
+
+    # free space where captures land - the disk that actually fills up
+    if (defined('\Config\Config::IMAGE_PATH')) {
+      $free = @disk_free_space(Config::IMAGE_PATH);
+      if ($free !== false) {
+        $vitals['disk_free'] = $free;
+      }
+    }
+
+    return $vitals;
   }
 
   # return the last $lines lines of the capture log (empty when the log is

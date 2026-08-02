@@ -97,6 +97,25 @@ class Capture extends \Lib\Model {
     return ceil($row[0]/$images_per_page);
   }
 
+  # get the most recent decoded capture with its reception metrics, for the
+  # live status terminal's idle summary line
+  public function getLatest() {
+    $query = $this->db_conn->query("SELECT decoded_passes.id,
+                                           decoded_passes.pass_start,
+                                           decoded_passes.gain,
+                                           decoded_passes.max_snr,
+                                           decoded_passes.avg_snr,
+                                           predict_passes.sat_name,
+                                           predict_passes.max_elev,
+                                           predict_passes.frame_loss_pct
+                                    FROM decoded_passes
+                                    INNER JOIN predict_passes
+                                      ON predict_passes.pass_start = decoded_passes.pass_start
+                                    ORDER BY decoded_passes.pass_start DESC LIMIT 1;");
+    $row = $query->fetchArray(SQLITE3_ASSOC);
+    return $row === false ? null : $row;
+  }
+
   # get the distinct satellite names present in the capture history, for
   # the gallery filter dropdown
   public function getSatList() {
