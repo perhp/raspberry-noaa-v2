@@ -63,18 +63,23 @@ class PassesController extends \Lib\Controller {
     $data = stream_get_contents($handle);
     fclose($handle);
 
-    $rows = preg_split('/\r?\n/', trim($data));
-    $rows = array_slice($rows, -$lines);
+    # SatDump redraws its live progress line with bare carriage returns, so a
+    # capture can write huge \r-separated runs with barely any real newlines -
+    # treat \r as a line break too, or the tail collapses into a few giant rows
+    $rows = preg_split('/\r\n|\r|\n/', $data);
 
     # SatDump colors its output with ANSI escape codes that end up in the log
     # verbatim, and its live mode reports a meaningless nan/inf progress
-    # percentage (no fixed input length) - clean both out of the banner lines
-    foreach ($rows as $i => $row) {
+    # percentage (no fixed input length) - clean both out, then drop rows that
+    # are empty after cleanup so they don't eat into the requested line count
+    $out = array();
+    foreach ($rows as $row) {
       $row = preg_replace('/\x1b\[[0-9;]*[A-Za-z]/', '', $row);
       $row = preg_replace('/Progress (?:nan|inf)%, /', '', $row);
-      $rows[$i] = $row;
+      if (trim($row) === '') continue;
+      $out[] = $row;
     }
-    return $rows;
+    return array_slice($out, -$lines);
   }
 }
 
