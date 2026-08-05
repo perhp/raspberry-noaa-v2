@@ -14,3 +14,7 @@ for img_path in $(sqlite3 ${DB_FILE} "select file_path from decoded_passes limit
   log "  Database entry pruned" "INFO"
 done
 find /srv/images /srv/images/thumb -type f \( -name '*.jpg' -o -name '*.png' \) -mtime -$PRUNE_OLDEST -delete
+
+# daily timelapse GIFs are station artifacts (not capture rows), so a count of oldest
+# captures says nothing about them - they are pruned by their own age window instead
+"${NOAA_HOME}/scripts/prune_scripts/prune_timelapses.sh"

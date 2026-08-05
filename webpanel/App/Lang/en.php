@@ -77,6 +77,8 @@ return array(
   "timelapse" => "Timelapse",
   "one_per_projection" => "one per projection",
   "all_projections" => "all projections",
+  "show_older" => "Show older",
+  "hide_older" => "Hide older",
   "no_captures_yet" => "Nothing decoded yet. Satellites appear here after their first successful pass.",
   "horizon_survey" => "Horizon survey",
   "passes_plotted" => "passes plotted",

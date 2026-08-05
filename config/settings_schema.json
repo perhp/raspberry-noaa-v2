@@ -159,6 +159,10 @@
     "enable_solar_terminator": { "type": "boolean" },
     "delete_oldest_n":         { "type": "number" },
     "delete_older_than_n":     { "type": "number" },
+    "delete_timelapses_older_than_n": {
+      "type": "number",
+      "required": "false"
+    },
     "disable_wifi_power_mgmt": { "type": "boolean" },
     "enable_email_push":       { "type": "boolean" },
     "email_push_address": {

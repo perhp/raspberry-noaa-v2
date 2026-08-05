@@ -1,5 +1,25 @@
 {% extends "base.html" %}
 
+{# one timelapse plate; shared by the latest-per-projection grid and the older set
+   below it. Macros see nothing of the page context, so lang and the icon come in
+   as arguments. #}
+{% macro timelapse(item, lang, dl_icon) %}
+  {% set label = item.variant != '' ? item.variant|replace({'_': ' '}) : lang.all_projections|default('all projections') %}
+  <figure class="instrument composite">
+    <a class="instrument-body" href="/images/{{ item.file }}">
+      <img src="/images/{{ item.file }}" alt="{{ lang.timelapse|default('Timelapse') }} - {{ label }}" loading="lazy">
+    </a>
+    <figcaption>
+      <span class="composite-meta">
+        <span class="composite-name">{{ label }}</span>
+        <span class="composite-date">{{ item.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
+      </span>
+      <a class="dl-btn" href="/images/{{ item.file }}" download
+         title="{{ lang.download|default('Download') }}" aria-label="{{ lang.download|default('Download') }} - {{ lang.timelapse|default('Timelapse') }} {{ label }}">{{ dl_icon }}</a>
+    </figcaption>
+  </figure>
+{% endmacro %}
+
 {% block body %}
   {% set dl_icon %}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7"/><path d="M4.5 6.5L8 10l3.5-3.5"/><path d="M2.5 13h11"/></svg>
@@ -182,29 +202,35 @@
   {% endif %}
 
   {% if timelapse_files|length > 0 %}
+    {% import _self as plates %}
     <div class="panel-label">
       <h2>{{ lang.timelapse|default('Timelapse') }}</h2>
       <span class="rule"></span>
       <span class="label-aux">{{ lang.one_per_projection|default('one per projection') }}</span>
     </div>
     <div class="composite-grid">
-      {% for variant, timelapse in timelapse_files %}
-        {% set label = variant != '' ? variant|replace({'_': ' '}) : lang.all_projections|default('all projections') %}
-        <figure class="instrument composite">
-          <a class="instrument-body" href="/images/{{ timelapse.file }}">
-            <img src="/images/{{ timelapse.file }}" alt="{{ lang.timelapse|default('Timelapse') }} - {{ label }}" loading="lazy">
-          </a>
-          <figcaption>
-            <span class="composite-meta">
-              <span class="composite-name">{{ label }}</span>
-              <span class="composite-date">{{ timelapse.date|date(constant('Config\\Config::DATE_FORMAT')) }}</span>
-            </span>
-            <a class="dl-btn" href="/images/{{ timelapse.file }}" download
-               title="{{ lang.download|default('Download') }}" aria-label="{{ lang.download|default('Download') }} - {{ lang.timelapse|default('Timelapse') }} {{ label }}">{{ dl_icon }}</a>
-          </figcaption>
-        </figure>
+      {% for timelapse in timelapse_files %}
+        {{ plates.timelapse(timelapse, lang, dl_icon) }}
       {% endfor %}
     </div>
+
+    {# every earlier day is still on disk until it is pruned - kept collapsed so the
+       page leads with the latest, and so the GIFs are only fetched if asked for #}
+    {% if older_timelapse_files|length > 0 %}
+      <div class="disclose">
+        <button type="button" class="disclose-btn" aria-expanded="false" aria-controls="older-timelapses"
+                data-label-more="{{ lang.show_older|default('Show older') }}"
+                data-label-less="{{ lang.hide_older|default('Hide older') }}">
+          <span class="disclose-text">{{ lang.show_older|default('Show older') }}</span>
+          <span class="disclose-count">{{ older_timelapse_files|length }}</span>
+        </button>
+      </div>
+      <div class="composite-grid older-grid" id="older-timelapses" hidden>
+        {% for timelapse in older_timelapse_files %}
+          {{ plates.timelapse(timelapse, lang, dl_icon) }}
+        {% endfor %}
+      </div>
+    {% endif %}
   {% endif %}
 
   <div class="panel-label">

@@ -16,6 +16,8 @@ for img_path in $(sqlite3 ${DB_FILE} "select file_path from decoded_passes where
   sqlite3 "${DB_FILE}" "delete from decoded_passes where file_path = \"$img_path\";"
   log "  Database entry pruned" "INFO"
 done
-# daily timelapse GIFs are station artifacts (not capture rows), so they are
-# only cleaned up here, by age
-find /srv/images /srv/images/thumb -type f \( -name '*.jpg' -o -name '*.png' -o -name 'timelapse-*.gif' \) -mtime +$PRUNE_OLDER_THAN -delete
+find /srv/images /srv/images/thumb -type f \( -name '*.jpg' -o -name '*.png' \) -mtime +$PRUNE_OLDER_THAN -delete
+
+# daily timelapse GIFs are station artifacts (not capture rows) and keep their own
+# retention window, which can be set well beyond the captures'
+"${NOAA_HOME}/scripts/prune_scripts/prune_timelapses.sh"

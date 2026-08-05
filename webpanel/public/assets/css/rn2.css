@@ -1499,6 +1499,75 @@ figure.composite:focus-within {
   border-color: var(--amber);
 }
 
+/* back catalogue of daily artifacts, revealed by its disclose button. The grid
+   carries [hidden], which needs restating here - .composite-grid's display would
+   otherwise win over the browser's [hidden] rule */
+.composite-grid[hidden] {
+  display: none;
+}
+
+.older-grid {
+  margin-top: 1rem;
+}
+
+.disclose {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* reads as the pager's buttons - same plate, same uppercase display face */
+.disclose-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.disclose-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.disclose-count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+}
+
+.disclose-btn:hover .disclose-count {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+/* chevron: down while collapsed, up once the set is open */
+.disclose-btn::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-0.12rem) rotate(45deg);
+  transition: transform 120ms ease;
+}
+
+.disclose-btn[aria-expanded="true"]::after {
+  transform: translateY(0.08rem) rotate(-135deg);
+}
+
 figure.sky-survey .instrument-body {
   background: var(--panel);
   padding: 0.5rem;

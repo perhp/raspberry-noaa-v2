@@ -98,8 +98,15 @@ days_to_schedule_passes: 7
 # pruning capabilities - must be configured in cron (see documentation)
 #   delete_oldest_n - how many oldest captures to delete on each run
 #   delete_older_than_n - delete all images older than this many days
+#   delete_timelapses_older_than_n - delete daily timelapse GIFs older than this many
+#     days. They are station artifacts rather than captures, so they need their own
+#     window - and since each is a fraction of the size of the day it summarizes
+#     (roughly 1-2 MB per projection per day), it can be set far higher than
+#     delete_older_than_n to keep them long after their frames are gone. 0 keeps
+#     them forever.
 delete_oldest_n: 0
 delete_older_than_n: 30
+delete_timelapses_older_than_n: 30
 
 # whether audio files should be deleted after images are created
 # if you choose to keep files, they will be automatically deleted after set number of days in delete_files_older_than_days (default is 3 days)
